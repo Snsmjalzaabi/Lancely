@@ -1,5 +1,5 @@
 from fastapi import FastAPI, APIRouter, HTTPException, Header, Request
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, HTMLResponse
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -351,6 +351,15 @@ async def download_screenshots():
         media_type="application/zip",
         filename="lancely_appstore_screenshots.zip",
     )
+
+
+@api_router.get("/legal/privacy", response_class=HTMLResponse)
+async def privacy_policy():
+    """Serve the Lancely privacy policy as a public HTML page (for App Store Connect)."""
+    p = Path(__file__).parent / "legal" / "privacy_policy.html"
+    if not p.exists():
+        raise HTTPException(status_code=404, detail="Privacy policy not found")
+    return HTMLResponse(content=p.read_text(encoding="utf-8"), status_code=200)
 
 
 
