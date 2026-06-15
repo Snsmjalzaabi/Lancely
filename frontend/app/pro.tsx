@@ -71,7 +71,7 @@ export default function ProPaywallScreen() {
 
   return (
     <View style={styles.flex}>
-      <ScreenHeader title="Solvio Pro" showBack />
+      <ScreenHeader title="Lancely Pro" showBack />
       <ScrollView contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
         <View style={styles.hero}>
           <View style={styles.proGlyph}>
@@ -79,7 +79,7 @@ export default function ProPaywallScreen() {
           </View>
           <Text style={styles.title}>Run your business{"\n"}without limits.</Text>
           <Text style={styles.subtitle}>
-            Solvio Pro unlocks branded invoices, unlimited records, and advanced reports.
+            Lancely Pro unlocks branded invoices, unlimited records, and advanced reports.
           </Text>
 
           <View style={styles.priceCard}>
@@ -110,7 +110,7 @@ export default function ProPaywallScreen() {
           <>
             <View style={styles.activeBanner} testID="pro-active-banner">
               <Ionicons name="checkmark-circle" size={18} color={colors.successText} />
-              <Text style={styles.activeText}>You&apos;re on Solvio Pro</Text>
+              <Text style={styles.activeText}>You&apos;re on Lancely Pro</Text>
             </View>
             <TouchableOpacity
               style={styles.cancelBtn}

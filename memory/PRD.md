@@ -1,11 +1,11 @@
-# Solvio — Product Requirements Document
+# Lancely — Product Requirements Document
 
 ## Tagline
 **From Client to Payment. One Place.**
 
 ## Problem
 Freelancers juggle WhatsApp, Email, Excel, Word, PDF invoices and Notes apps to manage
-their business. Solvio replaces all of that with one calm mobile dashboard.
+their business. Lancely replaces all of that with one calm mobile dashboard.
 
 ## MVP Feature Set (built)
 

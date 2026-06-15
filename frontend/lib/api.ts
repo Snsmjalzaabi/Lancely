@@ -1,7 +1,7 @@
 import { storage } from "@/src/utils/storage";
 
 const BASE = process.env.EXPO_PUBLIC_BACKEND_URL;
-const TOKEN_KEY = "solvio_session_token";
+const TOKEN_KEY = "lancely_session_token";
 
 export async function getToken(): Promise<string | null> {
   const tok = await storage.secureGet<string>(TOKEN_KEY, "");

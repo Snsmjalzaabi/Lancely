@@ -24,7 +24,7 @@ app = FastAPI()
 api_router = APIRouter(prefix="/api")
 
 logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger("solvio")
+logger = logging.getLogger("lancely")
 
 EMERGENT_SESSION_URL = "https://demobackend.emergentagent.com/auth/v1/env/oauth/session-data"
 
@@ -298,7 +298,7 @@ async def demo_session():
     """Create a demo user + session so testers and onboarding visitors can preview the app
     without going through Google OAuth. Each call returns a fresh disposable account."""
     suffix = uuid.uuid4().hex[:6]
-    email = f"demo_{suffix}@solvio.app"
+    email = f"demo_{suffix}@lancely.app"
     name = "Demo Freelancer"
     user_id = f"user_{uuid.uuid4().hex[:12]}"
     await db.users.insert_one(
@@ -816,7 +816,12 @@ async def dashboard(authorization: Optional[str] = Header(None)):
 
 
 @api_router.get("/reports/summary")
-async def reports_summary(authorization: Optional[str] = Header(None)):
+async def reports_summary(
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
+    status: Optional[str] = None,
+    authorization: Optional[str] = Header(None),
+):
     """Aggregated analytics for the Advanced Reports screen (Pro feature)."""
     user = await get_current_user(authorization)
     uid = user["user_id"]
@@ -824,6 +829,8 @@ async def reports_summary(authorization: Optional[str] = Header(None)):
     invoices = await db.invoices.find({"user_id": uid}, {"_id": 0}).to_list(5000)
     quotes = await db.quotes.find({"user_id": uid}, {"_id": 0}).to_list(5000)
     clients = await db.clients.find({"user_id": uid}, {"_id": 0}).to_list(5000)
+    invoices = _filter_by_status(invoices, status)
+    invoices = _filter_by_date(invoices, "due_date", date_from, date_to)
     client_map = {c["id"]: c for c in clients}
 
     # Monthly revenue for the last 6 months (based on paid_date).
@@ -964,7 +971,7 @@ async def reports_invoices_csv(
         ("issued", "Issued"),
         ("notes", "Notes"),
     ]
-    return _csv_response(invoices, row_for, all_cols, cols, "solvio-invoices.csv")
+    return _csv_response(invoices, row_for, all_cols, cols, "lancely-invoices.csv")
 
 
 @api_router.get("/reports/clients.csv")
@@ -1014,7 +1021,7 @@ async def reports_clients_csv(
         ("created", "Created"),
         ("notes", "Notes"),
     ]
-    return _csv_response(clients, row_for, all_cols, cols, "solvio-clients.csv")
+    return _csv_response(clients, row_for, all_cols, cols, "lancely-clients.csv")
 
 
 @api_router.get("/reports/payments.csv")
@@ -1055,7 +1062,7 @@ async def reports_payments_csv(
         ("total_invoice", "Invoice total"),
         ("status", "Status"),
     ]
-    return _csv_response(payments, row_for, all_cols, cols, "solvio-payments.csv")
+    return _csv_response(payments, row_for, all_cols, cols, "lancely-payments.csv")
 
 
 def _csv_response(rows, row_for, all_cols, cols_query, filename):
@@ -1223,7 +1230,7 @@ async def notifications(authorization: Optional[str] = Header(None)):
 
 @api_router.get("/")
 async def root():
-    return {"app": "Solvio", "status": "ok"}
+    return {"app": "Lancely", "status": "ok"}
 
 
 # ------------------------- Settings -------------------------
@@ -1317,7 +1324,7 @@ async def startup_indexes():
     await db.projects.create_index([("user_id", 1), ("status", 1)])
     await db.quotes.create_index([("user_id", 1), ("created_at", -1)])
     await db.invoices.create_index([("user_id", 1), ("due_date", 1)])
-    logger.info("Solvio indexes ready")
+    logger.info("Lancely indexes ready")
 
 
 @app.on_event("shutdown")

@@ -1,5 +1,5 @@
 {
-  "project_name": "Solvio",
+  "project_name": "Lancely",
   "app_type": "Mobile App (React Native + Expo)",
   "theme": "LIGHT",
   "archetype": "Archetype 1: Organic & Earthy",
@@ -82,7 +82,7 @@
   "screens": [
     {
       "name": "Auth",
-      "layout": "Vertical stack, centered content. Top: Brand Logo 'Solvio' (Outfit_700Bold, large). Middle: Input forms (Email, Password) with 16px gap. Bottom: Primary Login CTA. Background: #F9F9F6."
+      "layout": "Vertical stack, centered content. Top: Brand Logo 'Lancely' (Outfit_700Bold, large). Middle: Input forms (Email, Password) with 16px gap. Bottom: Primary Login CTA. Background: #F9F9F6."
     },
     {
       "name": "Dashboard",

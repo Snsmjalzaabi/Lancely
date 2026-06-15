@@ -125,7 +125,7 @@ export default function Login() {
             </Text>
           ) : null}
           <Text style={styles.footnote}>
-            By continuing you agree to Solvio&apos;s Terms & Privacy.
+            By continuing you agree to Lancely&apos;s Terms & Privacy.
           </Text>
 
           <View style={styles.themePreviewRow}>

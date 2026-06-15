@@ -5,6 +5,16 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as WebBrowser from "expo-web-browser";
 import { WebView } from "react-native-webview";
 
+// Optional native PDF viewer — only available in dev builds. Falls back to WebView in Expo Go.
+let RNPdf: React.ComponentType<{ source: { uri: string }; style?: object; trustAllCerts?: boolean }> | null = null;
+try {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const mod = require("react-native-pdf");
+  RNPdf = (mod && (mod.default || mod)) as typeof RNPdf;
+} catch {
+  RNPdf = null;
+}
+
 import { sharePdfUri } from "../lib/pdf";
 import { radii, spacing, useTheme, type ColorPalette } from "../lib/theme";
 
@@ -53,12 +63,20 @@ export function PdfPreviewModal({
           </View>
         ) : uri ? (
           <View style={styles.webPreview}>
-            <WebView
-              source={{ uri }}
-              originWhitelist={["*"]}
-              style={{ width: "100%", height: 320 }}
-              testID="pdf-webview"
-            />
+            {RNPdf ? (
+              <RNPdf
+                source={{ uri }}
+                style={{ width: "100%", height: 320 }}
+                trustAllCerts={false}
+              />
+            ) : (
+              <WebView
+                source={{ uri }}
+                originWhitelist={["*"]}
+                style={{ width: "100%", height: 320 }}
+                testID="pdf-webview"
+              />
+            )}
           </View>
         ) : null}
         <View style={{ gap: 10, marginTop: 18 }}>

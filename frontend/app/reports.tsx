@@ -17,6 +17,7 @@ import * as Sharing from "expo-sharing";
 import { EmptyState } from "../components/EmptyState";
 import { ScreenHeader } from "../components/Header";
 import { CsvExportPanel } from "../components/CsvExportPanel";
+import { QuickDateChips } from "../components/QuickDateChips";
 import { api } from "../lib/api";
 import { useAuth } from "../lib/auth";
 import { useFmtCurrency } from "../lib/format";
@@ -59,11 +60,16 @@ export default function ReportsScreen() {
   const { user } = useAuth();
   const [data, setData] = useState<ReportSummary | null>(null);
   const [loading, setLoading] = useState(true);
+  const [range, setRange] = useState<{ from: string; to: string }>({ from: "", to: "" });
 
   const load = useCallback(async () => {
-    const r = await api<ReportSummary>("/reports/summary");
+    const params = new URLSearchParams();
+    if (range.from) params.set("date_from", range.from);
+    if (range.to) params.set("date_to", range.to);
+    const qs = params.toString();
+    const r = await api<ReportSummary>(`/reports/summary${qs ? `?${qs}` : ""}`);
     setData(r);
-  }, []);
+  }, [range.from, range.to]);
 
   useFocusEffect(
     useCallback(() => {
@@ -88,9 +94,9 @@ export default function ReportsScreen() {
         <View style={{ flex: 1, justifyContent: "center" }}>
           <EmptyState
             icon="lock-closed-outline"
-            title="A Solvio Pro feature"
+            title="A Lancely Pro feature"
             subtitle="Upgrade to unlock revenue charts, top clients, and AR aging."
-            actionLabel="See Solvio Pro"
+            actionLabel="See Lancely Pro"
             onAction={() => router.replace("/pro")}
             testID="reports-paywall"
           />
@@ -114,6 +120,10 @@ export default function ReportsScreen() {
     <View style={styles.flex}>
       <ScreenHeader title="Advanced Reports" subtitle="Insights into your business" showBack />
       <ScrollView contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
+        <View style={styles.filterCard} testID="reports-filter-card">
+          <Text style={styles.filterTitle}>Date range</Text>
+          <QuickDateChips value={range} onChange={(next) => setRange(next)} testIdPrefix="reports-quick" />
+        </View>
         <View style={styles.kpiRow}>
           <KpiTile label="Total earned" value={fmtCurrency(data.total_paid)} colors={colors} testID="report-kpi-earned" />
           <KpiTile label="Avg invoice" value={fmtCurrency(data.avg_invoice_value)} colors={colors} testID="report-kpi-avg" />
@@ -370,4 +380,13 @@ const makeStyles = (colors: ColorPalette) =>
       marginTop: spacing.md,
     },
     csvText: { color: colors.textInverse, fontWeight: "700", fontSize: 14 },
+    filterCard: {
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: radii.lg,
+      padding: spacing.md,
+      marginBottom: 12,
+    },
+    filterTitle: { fontSize: 12, color: colors.textSecondary, fontWeight: "700", letterSpacing: 0.5, marginBottom: 8 },
   });

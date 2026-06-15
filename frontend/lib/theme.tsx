@@ -1,4 +1,4 @@
-// Solvio design tokens + theme provider.
+// Lancely design tokens + theme provider.
 // Four distinct themes: white, black, blue, amethyst. Selection persists across app launches.
 
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
@@ -244,7 +244,7 @@ type ThemeContextValue = {
 };
 
 const ThemeContext = createContext<ThemeContextValue | undefined>(undefined);
-const STORAGE_KEY = "solvio_theme";
+const STORAGE_KEY = "lancely_theme";
 
 const VALID_KEYS: ThemeKey[] = ["system", "white", "black", "blue", "amethyst"];
 

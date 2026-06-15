@@ -1,4 +1,4 @@
-"""Solvio backend regression test suite.
+"""Lancely backend regression test suite.
 
 Covers: demo auth, /auth/me, dashboard aggregates, clients CRUD, project
 status transitions, quote create/list/status (query param), invoice
@@ -44,7 +44,7 @@ class TestAuth:
         assert r.status_code == 200
         d = r.json()
         assert d["session_token"].startswith("demo_")
-        assert d["user"]["email"].startswith("demo_") and d["user"]["email"].endswith("@solvio.app")
+        assert d["user"]["email"].startswith("demo_") and d["user"]["email"].endswith("@lancely.app")
         assert d["user"]["user_id"]
         # expires_at is iso in the future
         exp = datetime.fromisoformat(d["expires_at"].replace("Z", "+00:00"))

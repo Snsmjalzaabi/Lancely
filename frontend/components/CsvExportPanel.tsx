@@ -21,9 +21,9 @@ const DATASET_LABEL: Record<DatasetKey, string> = {
   payments: "Payments",
 };
 const DATASET_FILE: Record<DatasetKey, string> = {
-  invoices: "solvio-invoices.csv",
-  clients: "solvio-clients.csv",
-  payments: "solvio-payments.csv",
+  invoices: "lancely-invoices.csv",
+  clients: "lancely-clients.csv",
+  payments: "lancely-payments.csv",
 };
 
 export function CsvExportPanel() {
@@ -145,6 +145,13 @@ export function CsvExportPanel() {
             </View>
             {filtersOpen === ds ? (
               <View style={styles.filterBox}>
+                <QuickDateChips
+                  value={{ from: f.from, to: f.to }}
+                  onChange={(next) =>
+                    setFilters((p) => ({ ...p, [ds]: { ...p[ds], from: next.from, to: next.to } }))
+                  }
+                  testIdPrefix={`csv-${ds}-chip`}
+                />
                 <View style={styles.filterRow}>
                   <Text style={styles.filterLabel}>From</Text>
                   <TextInput

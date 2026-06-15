@@ -104,7 +104,7 @@ export default function SettingsScreen() {
 
   return (
     <View style={styles.flex}>
-      <ScreenHeader title="Settings" subtitle="Personalize Solvio" bellTo="/notifications" />
+      <ScreenHeader title="Settings" subtitle="Personalize Lancely" bellTo="/notifications" />
       <ScrollView contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
         <View style={styles.profileCard} testID="settings-profile-card">
           <View style={styles.avatar}>
@@ -171,7 +171,7 @@ export default function SettingsScreen() {
           >
             <Ionicons name="rocket-outline" size={18} color={colors.textInverse} />
             <View style={{ flex: 1 }}>
-              <Text style={styles.upgradeBannerTitle}>Unlock Solvio Pro</Text>
+              <Text style={styles.upgradeBannerTitle}>Unlock Lancely Pro</Text>
               <Text style={styles.upgradeBannerSub}>
                 Custom logo, accent color, advanced reports — AED 29/mo
               </Text>
@@ -310,7 +310,7 @@ export default function SettingsScreen() {
           <Text style={styles.signOutText}>Sign out</Text>
         </TouchableOpacity>
 
-        <Text style={styles.footer}>Solvio — From Client to Payment. One Place.</Text>
+        <Text style={styles.footer}>Lancely — From Client to Payment. One Place.</Text>
       </ScrollView>
 
       <ThemePickerSheet open={themeOpen} onClose={() => setThemeOpen(false)} />

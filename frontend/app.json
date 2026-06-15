@@ -1,17 +1,19 @@
 {
   "expo": {
-    "name": "frontend",
-    "slug": "frontend",
+    "name": "Lancely",
+    "slug": "lancely",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "frontend",
+    "scheme": "lancely",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.lancely.app"
     },
     "android": {
+      "package": "com.lancely.app",
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#000"
