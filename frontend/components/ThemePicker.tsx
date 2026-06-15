@@ -3,7 +3,14 @@ import { Modal, Pressable, StyleSheet, Text, TouchableOpacity, View } from "reac
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { THEME_LIST, useTheme, radii, type ColorPalette, type ThemeKey } from "../lib/theme";
+import {
+  PICKER_OPTIONS,
+  THEMES,
+  useTheme,
+  radii,
+  type ColorPalette,
+  type ThemeKey,
+} from "../lib/theme";
 
 export function ThemePickerTrigger() {
   const { colors } = useTheme();
@@ -30,7 +37,7 @@ export function ThemePickerSheet({
   open: boolean;
   onClose: () => void;
 }) {
-  const { themeKey, setTheme, colors } = useTheme();
+  const { themeKey, setTheme, colors, resolvedKey } = useTheme();
   const insets = useSafeAreaInsets();
   const styles = makeSheetStyles(colors);
   return (
@@ -41,34 +48,58 @@ export function ThemePickerSheet({
         <Text style={styles.title}>Theme</Text>
         <Text style={styles.subtitle}>Pick a vibe. Saved instantly.</Text>
         <View style={styles.grid}>
-          {THEME_LIST.map((t) => {
-            const active = themeKey === t.key;
+          {PICKER_OPTIONS.map((opt) => {
+            const active = themeKey === opt.key;
+            const isSystem = opt.key === "system";
+            // Preview uses the concrete theme that would be applied.
+            const previewKey = isSystem ? resolvedKey : opt.key;
+            const preview = THEMES[previewKey].colors;
             return (
               <TouchableOpacity
-                key={t.key}
+                key={opt.key}
                 style={[styles.tile, active && styles.tileActive]}
                 onPress={() => {
-                  setTheme(t.key as ThemeKey);
+                  setTheme(opt.key as ThemeKey);
                   onClose();
                 }}
-                testID={`theme-option-${t.key}`}
+                testID={`theme-option-${opt.key}`}
                 activeOpacity={0.85}
               >
-                <View
-                  style={[
-                    styles.preview,
-                    { backgroundColor: t.colors.bg, borderColor: t.colors.border },
-                  ]}
-                >
-                  <View style={[styles.previewBar, { backgroundColor: t.colors.primary }]} />
-                  <View style={[styles.previewLine, { backgroundColor: t.colors.bgAlt }]} />
-                  <View style={[styles.previewLine, { width: "60%", backgroundColor: t.colors.bgAlt }]} />
-                </View>
+                {isSystem ? (
+                  <View style={[styles.preview, { backgroundColor: opt.swatch, borderColor: colors.border, padding: 0, overflow: "hidden" }]}>
+                    <View style={styles.systemSplit}>
+                      <View style={[styles.systemHalf, { backgroundColor: THEMES.white.colors.bg }]}>
+                        <View style={[styles.systemBar, { backgroundColor: THEMES.white.colors.primary }]} />
+                      </View>
+                      <View style={[styles.systemHalf, { backgroundColor: THEMES.black.colors.bg }]}>
+                        <View style={[styles.systemBar, { backgroundColor: THEMES.black.colors.primary }]} />
+                      </View>
+                    </View>
+                  </View>
+                ) : (
+                  <View
+                    style={[
+                      styles.preview,
+                      { backgroundColor: preview.bg, borderColor: preview.border },
+                    ]}
+                  >
+                    <View style={[styles.previewBar, { backgroundColor: preview.primary }]} />
+                    <View style={[styles.previewLine, { backgroundColor: preview.bgAlt }]} />
+                    <View style={[styles.previewLine, { width: "60%", backgroundColor: preview.bgAlt }]} />
+                  </View>
+                )}
                 <View style={styles.tileMeta}>
-                  <View style={[styles.dot, { backgroundColor: t.swatch }]} />
+                  {isSystem ? (
+                    <View style={styles.dotSplitWrap}>
+                      <View style={[styles.dotHalf, { backgroundColor: opt.swatch }]} />
+                      <View style={[styles.dotHalf, { backgroundColor: opt.swatchAlt ?? "#0A0A0A", marginLeft: -7 }]} />
+                    </View>
+                  ) : (
+                    <View style={[styles.dot, { backgroundColor: opt.swatch }]} />
+                  )}
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.tileLabel}>{t.label}</Text>
-                    <Text style={styles.tileHint}>{t.hint}</Text>
+                    <Text style={styles.tileLabel}>{opt.label}</Text>
+                    <Text style={styles.tileHint}>{opt.hint}</Text>
                   </View>
                   {active ? (
                     <Ionicons name="checkmark-circle" size={20} color={colors.primary} />
@@ -142,8 +173,17 @@ const makeSheetStyles = (colors: ColorPalette) =>
     },
     previewBar: { height: 14, width: "40%", borderRadius: 4 },
     previewLine: { height: 6, width: "85%", borderRadius: 3 },
+    systemSplit: { flexDirection: "row", flex: 1 },
+    systemHalf: {
+      flex: 1,
+      justifyContent: "flex-end",
+      padding: 8,
+    },
+    systemBar: { height: 14, width: "60%", borderRadius: 4 },
     tileMeta: { flexDirection: "row", alignItems: "center", gap: 8 },
     dot: { width: 14, height: 14, borderRadius: 7 },
+    dotSplitWrap: { flexDirection: "row", alignItems: "center", width: 21 },
+    dotHalf: { width: 14, height: 14, borderRadius: 7, borderWidth: 1, borderColor: colors.border },
     tileLabel: { fontWeight: "700", color: colors.textPrimary, fontSize: 14 },
     tileHint: { color: colors.textSecondary, fontSize: 12, marginTop: 1 },
   });

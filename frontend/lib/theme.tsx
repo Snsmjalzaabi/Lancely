@@ -3,6 +3,7 @@
 
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import type { StatusBarStyle } from "expo-status-bar";
+import { useColorScheme } from "react-native";
 
 import { storage } from "@/src/utils/storage";
 
@@ -44,15 +45,24 @@ export type ColorPalette = {
   statusBar: StatusBarStyle;
 };
 
-export type ThemeKey = "white" | "black" | "blue" | "amethyst";
+export type ThemeKey = "system" | "white" | "black" | "blue" | "amethyst";
+export type ConcreteThemeKey = Exclude<ThemeKey, "system">;
 
 export type ThemeDef = {
-  key: ThemeKey;
+  key: ConcreteThemeKey;
   label: string;
   hint: string;
   swatch: string; // dot color shown in the picker
   isDark: boolean;
   colors: ColorPalette;
+};
+
+export type PickerOption = {
+  key: ThemeKey;
+  label: string;
+  hint: string;
+  swatch: string; // single-color dot
+  swatchAlt?: string; // second color for split swatch (used by "system")
 };
 
 // ---- Theme palettes ----
@@ -189,8 +199,17 @@ const amethyst: ThemeDef = {
   },
 };
 
-export const THEMES: Record<ThemeKey, ThemeDef> = { white, black, blue, amethyst };
+export const THEMES: Record<ConcreteThemeKey, ThemeDef> = { white, black, blue, amethyst };
 export const THEME_LIST: ThemeDef[] = [white, black, blue, amethyst];
+
+// Picker entries (includes the synthetic "system" option).
+export const PICKER_OPTIONS: PickerOption[] = [
+  { key: "system", label: "System", hint: "Follows your device", swatch: "#FFFFFF", swatchAlt: "#0A0A0A" },
+  { key: "white", label: white.label, hint: white.hint, swatch: white.swatch },
+  { key: "black", label: black.label, hint: black.hint, swatch: black.swatch },
+  { key: "blue", label: blue.label, hint: blue.hint, swatch: blue.swatch },
+  { key: "amethyst", label: amethyst.label, hint: amethyst.hint, swatch: amethyst.swatch },
+];
 
 // ---- Static (theme-independent) tokens ----
 
@@ -216,7 +235,8 @@ export const type = {
 
 type ThemeContextValue = {
   theme: ThemeDef;
-  themeKey: ThemeKey;
+  themeKey: ThemeKey; // stored preference (may be "system")
+  resolvedKey: ConcreteThemeKey; // active palette key after resolution
   colors: ColorPalette;
   setTheme: (key: ThemeKey) => void;
 };
@@ -224,14 +244,17 @@ type ThemeContextValue = {
 const ThemeContext = createContext<ThemeContextValue | undefined>(undefined);
 const STORAGE_KEY = "solvio_theme";
 
+const VALID_KEYS: ThemeKey[] = ["system", "white", "black", "blue", "amethyst"];
+
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [themeKey, setThemeKey] = useState<ThemeKey>("white");
+  const [themeKey, setThemeKey] = useState<ThemeKey>("system");
+  const systemScheme = useColorScheme();
 
   useEffect(() => {
     (async () => {
-      const saved = await storage.getItem<string>(STORAGE_KEY, "white");
-      if (saved && (saved === "white" || saved === "black" || saved === "blue" || saved === "amethyst")) {
-        setThemeKey(saved);
+      const saved = await storage.getItem<string>(STORAGE_KEY, "system");
+      if (saved && (VALID_KEYS as string[]).includes(saved)) {
+        setThemeKey(saved as ThemeKey);
       }
     })();
   }, []);
@@ -241,14 +264,22 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     storage.setItem(STORAGE_KEY, key);
   }, []);
 
+  const resolvedKey: ConcreteThemeKey = useMemo(() => {
+    if (themeKey === "system") {
+      return systemScheme === "dark" ? "black" : "white";
+    }
+    return themeKey;
+  }, [themeKey, systemScheme]);
+
   const value = useMemo<ThemeContextValue>(
     () => ({
-      theme: THEMES[themeKey],
+      theme: THEMES[resolvedKey],
       themeKey,
-      colors: THEMES[themeKey].colors,
+      resolvedKey,
+      colors: THEMES[resolvedKey].colors,
       setTheme,
     }),
-    [themeKey, setTheme],
+    [themeKey, resolvedKey, setTheme],
   );
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
