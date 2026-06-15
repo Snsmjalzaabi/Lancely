@@ -7,12 +7,14 @@ import { StatusBar } from "expo-status-bar";
 
 import { useIconFonts } from "@/src/hooks/use-icon-fonts";
 import { AuthProvider } from "../lib/auth";
-import { ThemeProvider, useTheme } from "../lib/theme";
+import { SettingsProvider } from "../lib/settings";
+import { ThemeProvider, useTheme, useApplyAccentFromSettings } from "../lib/theme";
 
 SplashScreen.preventAutoHideAsync();
 
 function ThemedShell() {
   const { colors, theme } = useTheme();
+  useApplyAccentFromSettings();
   return (
     <>
       <StatusBar style={theme.colors.statusBar} />
@@ -42,7 +44,9 @@ export default function RootLayout() {
       <SafeAreaProvider>
         <ThemeProvider>
           <AuthProvider>
-            <ThemedShell />
+            <SettingsProvider>
+              <ThemedShell />
+            </SettingsProvider>
           </AuthProvider>
         </ThemeProvider>
       </SafeAreaProvider>

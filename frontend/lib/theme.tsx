@@ -6,6 +6,7 @@ import type { StatusBarStyle } from "expo-status-bar";
 import { useColorScheme } from "react-native";
 
 import { storage } from "@/src/utils/storage";
+import { useSettings } from "./settings";
 
 export type ColorPalette = {
   bg: string;
@@ -239,6 +240,7 @@ type ThemeContextValue = {
   resolvedKey: ConcreteThemeKey; // active palette key after resolution
   colors: ColorPalette;
   setTheme: (key: ThemeKey) => void;
+  setAccentOverride: (hex: string | null) => void;
 };
 
 const ThemeContext = createContext<ThemeContextValue | undefined>(undefined);
@@ -248,6 +250,7 @@ const VALID_KEYS: ThemeKey[] = ["system", "white", "black", "blue", "amethyst"];
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [themeKey, setThemeKey] = useState<ThemeKey>("system");
+  const [accentOverride, setAccentOverride] = useState<string | null>(null);
   const systemScheme = useColorScheme();
 
   useEffect(() => {
@@ -271,18 +274,31 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     return themeKey;
   }, [themeKey, systemScheme]);
 
-  const value = useMemo<ThemeContextValue>(
-    () => ({
-      theme: THEMES[resolvedKey],
+  const value = useMemo<ThemeContextValue>(() => {
+    const base = THEMES[resolvedKey];
+    const palette: ColorPalette = accentOverride
+      ? { ...base.colors, primary: accentOverride, primaryHover: accentOverride, borderFocus: accentOverride }
+      : base.colors;
+    return {
+      theme: { ...base, colors: palette },
       themeKey,
       resolvedKey,
-      colors: THEMES[resolvedKey].colors,
+      colors: palette,
       setTheme,
-    }),
-    [themeKey, resolvedKey, setTheme],
-  );
+      setAccentOverride,
+    };
+  }, [themeKey, resolvedKey, accentOverride, setTheme]);
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
+}
+
+/** Reads accent_color from user settings and pushes it into ThemeProvider. */
+export function useApplyAccentFromSettings() {
+  const { settings } = useSettings();
+  const { setAccentOverride } = useTheme();
+  useEffect(() => {
+    setAccentOverride(settings.accent_color ?? null);
+  }, [settings.accent_color, setAccentOverride]);
 }
 
 export function useTheme(): ThemeContextValue {

@@ -4,6 +4,7 @@ from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 import os
 import logging
+import re
 import uuid
 import httpx
 from pathlib import Path
@@ -145,6 +146,17 @@ class ProjectStatusUpdate(BaseModel):
 
 # Invoices
 InvoiceStatus = Literal["pending", "paid", "partial", "overdue"]
+
+
+# Settings
+SUPPORTED_CURRENCIES = ["AED", "USD", "EUR", "GBP", "SAR", "INR", "EGP", "MAD", "SGD", "CAD"]
+
+
+class UserSettings(BaseModel):
+    currency: str = "AED"
+    timezone: str = "device"  # "device" or IANA tz id
+    accent_color: Optional[str] = None  # hex like "#A855F7"; None = follow theme
+    logo_base64: Optional[str] = None  # data URI or raw base64
 
 
 class InvoiceIn(BaseModel):
@@ -832,6 +844,71 @@ async def notifications(authorization: Optional[str] = Header(None)):
 @api_router.get("/")
 async def root():
     return {"app": "Solvio", "status": "ok"}
+
+
+# ------------------------- Settings -------------------------
+
+DEFAULT_SETTINGS = UserSettings().dict()
+
+
+@api_router.get("/me/settings", response_model=UserSettings)
+async def get_settings(authorization: Optional[str] = Header(None)):
+    user = await get_current_user(authorization)
+    s = user.get("settings") or {}
+    merged = {**DEFAULT_SETTINGS, **s}
+    return UserSettings(**merged)
+
+
+@api_router.put("/me/settings", response_model=UserSettings)
+async def update_settings(body: UserSettings, authorization: Optional[str] = Header(None)):
+    user = await get_current_user(authorization)
+    # validate currency
+    cur = body.currency.upper().strip() if body.currency else "AED"
+    if cur not in SUPPORTED_CURRENCIES:
+        raise HTTPException(status_code=400, detail=f"Unsupported currency '{cur}'")
+    # validate accent color (basic)
+    accent = body.accent_color
+    if accent:
+        accent = accent.strip()
+        if not re.match(r"^#([0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$", accent):
+            raise HTTPException(status_code=400, detail="accent_color must be a hex like #A855F7")
+    # logo size guard (allow up to ~2 MB base64)
+    logo = body.logo_base64
+    if logo and len(logo) > 3_000_000:
+        raise HTTPException(status_code=400, detail="Logo is too large (max ~2MB)")
+    payload = {
+        "currency": cur,
+        "timezone": body.timezone or "device",
+        "accent_color": accent,
+        "logo_base64": logo,
+    }
+    await db.users.update_one(
+        {"user_id": user["user_id"]}, {"$set": {"settings": payload, "updated_at": now_utc()}}
+    )
+    return UserSettings(**payload)
+
+
+@api_router.get("/settings/options")
+async def settings_options():
+    return {
+        "currencies": SUPPORTED_CURRENCIES,
+        "timezones": [
+            "device",
+            "UTC",
+            "Asia/Dubai",
+            "Asia/Riyadh",
+            "Asia/Kolkata",
+            "Asia/Singapore",
+            "Europe/London",
+            "Europe/Berlin",
+            "America/New_York",
+            "America/Los_Angeles",
+        ],
+        "accent_swatches": [
+            "#0F172A", "#2563EB", "#A855F7", "#10B981",
+            "#F97316", "#EF4444", "#EC4899", "#14B8A6",
+        ],
+    }
 
 
 # ------------------------- App setup -------------------------

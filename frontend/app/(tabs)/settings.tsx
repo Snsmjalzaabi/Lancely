@@ -1,7 +1,10 @@
 import { useState } from "react";
 import {
+  ActivityIndicator,
   Image,
   Linking,
+  Modal,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -9,10 +12,13 @@ import {
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import * as ImagePicker from "expo-image-picker";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { ScreenHeader } from "../../components/Header";
 import { ThemePickerSheet } from "../../components/ThemePicker";
 import { useAuth } from "../../lib/auth";
+import { useSettings } from "../../lib/settings";
 import {
   PICKER_OPTIONS,
   radii,
@@ -26,15 +32,68 @@ export default function SettingsScreen() {
   const { colors, themeKey, resolvedKey } = useTheme();
   const styles = makeStyles(colors);
   const { user, signOut } = useAuth();
-  const [themeOpen, setThemeOpen] = useState(false);
+  const { settings, options, update, loading } = useSettings();
 
-  const activeOption =
-    PICKER_OPTIONS.find((o) => o.key === themeKey) ?? PICKER_OPTIONS[0];
-  const resolvedOption = PICKER_OPTIONS.find((o) => o.key === resolvedKey);
+  const [themeOpen, setThemeOpen] = useState(false);
+  const [currencyOpen, setCurrencyOpen] = useState(false);
+  const [tzOpen, setTzOpen] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const activeOpt = PICKER_OPTIONS.find((o) => o.key === themeKey) ?? PICKER_OPTIONS[0];
+  const resolvedOpt = PICKER_OPTIONS.find((o) => o.key === resolvedKey);
   const themeValueLabel =
-    themeKey === "system"
-      ? `System · ${resolvedOption?.label ?? ""}`
-      : activeOption.label;
+    themeKey === "system" ? `System · ${resolvedOpt?.label ?? ""}` : activeOpt.label;
+
+  const pickLogo = async () => {
+    setError(null);
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!perm.granted) {
+      setError("Photo permission denied. Enable it in Settings to upload a logo.");
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.6,
+      base64: true,
+    });
+    if (result.canceled || !result.assets?.[0]) return;
+    const asset = result.assets[0];
+    const data = asset.base64
+      ? `data:image/jpeg;base64,${asset.base64}`
+      : asset.uri;
+    setUploading(true);
+    try {
+      await update({ logo_base64: data });
+    } catch (e) {
+      const m = e instanceof Error ? e.message : "Upload failed";
+      setError(m);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const removeLogo = async () => {
+    setError(null);
+    try {
+      await update({ logo_base64: null });
+    } catch (e) {
+      const m = e instanceof Error ? e.message : "Remove failed";
+      setError(m);
+    }
+  };
+
+  const setAccent = async (hex: string | null) => {
+    setError(null);
+    try {
+      await update({ accent_color: hex });
+    } catch (e) {
+      const m = e instanceof Error ? e.message : "Update failed";
+      setError(m);
+    }
+  };
 
   return (
     <View style={styles.flex}>
@@ -61,28 +120,117 @@ export default function SettingsScreen() {
         </View>
 
         <Text style={styles.sectionTitle}>Appearance</Text>
-        <TouchableOpacity
-          style={styles.row}
+        <SettingsRow
+          icon="color-palette-outline"
+          label="Theme"
+          value={themeValueLabel}
           onPress={() => setThemeOpen(true)}
+          colors={colors}
           testID="settings-theme-row"
-          activeOpacity={0.7}
-        >
-          <View style={styles.rowIcon}>
-            <Ionicons name="color-palette-outline" size={18} color={colors.textPrimary} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.rowLabel}>Theme</Text>
-            <Text style={styles.rowSub}>{themeValueLabel}</Text>
-          </View>
-          <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
-        </TouchableOpacity>
+        />
 
         <Text style={styles.sectionTitle}>Workspace</Text>
-        <InfoRow icon="cash-outline" label="Currency" value="AED" colors={colors} testID="settings-currency-row" />
-        <InfoRow icon="time-outline" label="Time zone" value="Device default" colors={colors} testID="settings-tz-row" />
+        <SettingsRow
+          icon="cash-outline"
+          label="Currency"
+          value={settings.currency}
+          onPress={() => setCurrencyOpen(true)}
+          colors={colors}
+          testID="settings-currency-row"
+        />
+        <SettingsRow
+          icon="time-outline"
+          label="Time zone"
+          value={settings.timezone === "device" ? "Device default" : settings.timezone}
+          onPress={() => setTzOpen(true)}
+          colors={colors}
+          testID="settings-tz-row"
+        />
+
+        <View style={styles.proHeaderRow}>
+          <Text style={styles.sectionTitle}>Branding</Text>
+          <View style={styles.proBadge}>
+            <Ionicons name="sparkles" size={11} color={colors.primary} />
+            <Text style={[styles.proText, { color: colors.primary }]}>PRO</Text>
+          </View>
+        </View>
+
+        <View style={styles.brandCard} testID="settings-brand-card">
+          <View style={styles.brandRow}>
+            <View style={styles.logoPreview}>
+              {settings.logo_base64 ? (
+                <Image source={{ uri: settings.logo_base64 }} style={styles.logoImg} />
+              ) : (
+                <Ionicons name="image-outline" size={28} color={colors.textMuted} />
+              )}
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.brandLabel}>Business logo</Text>
+              <Text style={styles.brandHint}>Used on invoices & quotes (coming soon).</Text>
+              <View style={{ flexDirection: "row", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
+                <TouchableOpacity
+                  style={styles.smallBtn}
+                  onPress={pickLogo}
+                  disabled={uploading}
+                  testID="settings-logo-upload"
+                >
+                  {uploading ? (
+                    <ActivityIndicator size="small" color={colors.textInverse} />
+                  ) : (
+                    <>
+                      <Ionicons name="cloud-upload-outline" size={14} color={colors.textInverse} />
+                      <Text style={styles.smallBtnText}>{settings.logo_base64 ? "Replace" : "Upload"}</Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+                {settings.logo_base64 ? (
+                  <TouchableOpacity
+                    style={styles.smallGhostBtn}
+                    onPress={removeLogo}
+                    testID="settings-logo-remove"
+                  >
+                    <Text style={styles.smallGhostText}>Remove</Text>
+                  </TouchableOpacity>
+                ) : null}
+              </View>
+            </View>
+          </View>
+
+          <View style={styles.divider} />
+
+          <Text style={styles.brandLabel}>Accent color</Text>
+          <Text style={styles.brandHint}>Overrides the primary color of your theme.</Text>
+          <View style={styles.swatchRow}>
+            <TouchableOpacity
+              style={[styles.swatch, !settings.accent_color && styles.swatchActive]}
+              onPress={() => setAccent(null)}
+              testID="settings-accent-reset"
+            >
+              <Ionicons name="refresh-outline" size={14} color={colors.textPrimary} />
+            </TouchableOpacity>
+            {(options?.accent_swatches ?? []).map((hex) => {
+              const active = settings.accent_color?.toUpperCase() === hex.toUpperCase();
+              return (
+                <TouchableOpacity
+                  key={hex}
+                  style={[
+                    styles.swatch,
+                    { backgroundColor: hex, borderColor: active ? colors.textPrimary : colors.border },
+                    active && { borderWidth: 3 },
+                  ]}
+                  onPress={() => setAccent(hex)}
+                  testID={`settings-accent-${hex.replace("#", "")}`}
+                />
+              );
+            })}
+          </View>
+        </View>
+
+        {error ? <Text style={styles.error}>{error}</Text> : null}
+        {loading ? <ActivityIndicator color={colors.primary} style={{ marginTop: 8 }} /> : null}
 
         <Text style={styles.sectionTitle}>About</Text>
-        <InfoRow icon="rocket-outline" label="Version" value="1.0.0 · MVP" colors={colors} testID="settings-version-row" />
+        <SettingsRow icon="rocket-outline" label="Version" value="1.0.0 · MVP" colors={colors} testID="settings-version-row" />
         <TouchableOpacity
           style={styles.row}
           onPress={() => Linking.openURL("https://emergent.sh")}
@@ -113,26 +261,50 @@ export default function SettingsScreen() {
       </ScrollView>
 
       <ThemePickerSheet open={themeOpen} onClose={() => setThemeOpen(false)} />
+      <OptionsSheet
+        title="Currency"
+        open={currencyOpen}
+        onClose={() => setCurrencyOpen(false)}
+        options={(options?.currencies ?? ["AED"]).map((c) => ({ key: c, label: c }))}
+        value={settings.currency}
+        onSelect={(v) => update({ currency: v })}
+        testIdPrefix="settings-currency-option"
+      />
+      <OptionsSheet
+        title="Time zone"
+        open={tzOpen}
+        onClose={() => setTzOpen(false)}
+        options={(options?.timezones ?? ["device"]).map((t) => ({
+          key: t,
+          label: t === "device" ? "Device default" : t,
+        }))}
+        value={settings.timezone}
+        onSelect={(v) => update({ timezone: v })}
+        testIdPrefix="settings-tz-option"
+      />
     </View>
   );
 }
 
-function InfoRow({
+function SettingsRow({
   icon,
   label,
   value,
+  onPress,
   colors,
   testID,
 }: {
   icon: keyof typeof Ionicons.glyphMap;
   label: string;
   value: string;
+  onPress?: () => void;
   colors: ColorPalette;
   testID?: string;
 }) {
   const styles = makeStyles(colors);
+  const Wrap = onPress ? TouchableOpacity : View;
   return (
-    <View style={styles.row} testID={testID}>
+    <Wrap style={styles.row} onPress={onPress} activeOpacity={0.7} testID={testID}>
       <View style={styles.rowIcon}>
         <Ionicons name={icon} size={18} color={colors.textPrimary} />
       </View>
@@ -140,7 +312,62 @@ function InfoRow({
         <Text style={styles.rowLabel}>{label}</Text>
       </View>
       <Text style={styles.rowValue}>{value}</Text>
-    </View>
+      {onPress ? <Ionicons name="chevron-forward" size={16} color={colors.textMuted} /> : null}
+    </Wrap>
+  );
+}
+
+function OptionsSheet({
+  title,
+  open,
+  onClose,
+  options,
+  value,
+  onSelect,
+  testIdPrefix,
+}: {
+  title: string;
+  open: boolean;
+  onClose: () => void;
+  options: { key: string; label: string }[];
+  value: string;
+  onSelect: (key: string) => void;
+  testIdPrefix: string;
+}) {
+  const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
+  const styles = makeStyles(colors);
+  return (
+    <Modal visible={open} transparent animationType="fade" onRequestClose={onClose}>
+      <Pressable style={styles.backdrop} onPress={onClose} />
+      <View style={[styles.sheet, { paddingBottom: insets.bottom + 16, maxHeight: "70%" }]}>
+        <View style={styles.handle} />
+        <Text style={styles.sheetTitle}>{title}</Text>
+        <ScrollView showsVerticalScrollIndicator={false}>
+          {options.map((opt) => {
+            const active = opt.key === value;
+            return (
+              <TouchableOpacity
+                key={opt.key}
+                style={styles.optionRow}
+                onPress={() => {
+                  onSelect(opt.key);
+                  onClose();
+                }}
+                testID={`${testIdPrefix}-${opt.key}`}
+              >
+                <Text style={[styles.optionLabel, active && { color: colors.primary, fontWeight: "700" }]}>
+                  {opt.label}
+                </Text>
+                {active ? (
+                  <Ionicons name="checkmark-circle" size={20} color={colors.primary} />
+                ) : null}
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      </View>
+    </Modal>
   );
 }
 
@@ -179,6 +406,21 @@ const makeStyles = (colors: ColorPalette) =>
       marginBottom: spacing.sm,
       paddingHorizontal: 4,
     },
+    proHeaderRow: { flexDirection: "row", alignItems: "center", gap: 8 },
+    proBadge: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 4,
+      backgroundColor: colors.bgAlt,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 999,
+      paddingHorizontal: 8,
+      paddingVertical: 2,
+      marginTop: spacing.lg,
+      marginBottom: spacing.sm,
+    },
+    proText: { fontSize: 10, fontWeight: "800", letterSpacing: 0.4 },
     row: {
       flexDirection: "row",
       alignItems: "center",
@@ -201,6 +443,65 @@ const makeStyles = (colors: ColorPalette) =>
     rowLabel: { ...type.bodyLg, color: colors.textPrimary, fontWeight: "600" },
     rowSub: { ...type.body, color: colors.textSecondary, marginTop: 2 },
     rowValue: { ...type.body, color: colors.textSecondary, fontWeight: "600" },
+    brandCard: {
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: radii.lg,
+      padding: spacing.md,
+      marginBottom: 8,
+    },
+    brandRow: { flexDirection: "row", alignItems: "center", gap: 12 },
+    logoPreview: {
+      width: 64,
+      height: 64,
+      borderRadius: radii.md,
+      backgroundColor: colors.bgAlt,
+      alignItems: "center",
+      justifyContent: "center",
+      overflow: "hidden",
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    logoImg: { width: 64, height: 64 },
+    brandLabel: { fontWeight: "700", color: colors.textPrimary, fontSize: 14 },
+    brandHint: { color: colors.textSecondary, fontSize: 12, marginTop: 2 },
+    smallBtn: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+      backgroundColor: colors.primary,
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      borderRadius: radii.md,
+    },
+    smallBtnText: { color: colors.textInverse, fontWeight: "600", fontSize: 13 },
+    smallGhostBtn: {
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      borderRadius: radii.md,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    smallGhostText: { color: colors.textSecondary, fontWeight: "600", fontSize: 13 },
+    divider: {
+      height: 1,
+      backgroundColor: colors.border,
+      marginVertical: spacing.md,
+    },
+    swatchRow: { flexDirection: "row", flexWrap: "wrap", gap: 10, marginTop: 10 },
+    swatch: {
+      width: 32,
+      height: 32,
+      borderRadius: 16,
+      borderWidth: 1,
+      borderColor: colors.border,
+      backgroundColor: colors.bgAlt,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    swatchActive: { borderColor: colors.textPrimary, borderWidth: 2 },
+    error: { color: colors.errorText, fontSize: 13, marginTop: 8, textAlign: "center" },
     signOut: {
       flexDirection: "row",
       alignItems: "center",
@@ -218,4 +519,36 @@ const makeStyles = (colors: ColorPalette) =>
       fontSize: 12,
       marginTop: spacing.lg,
     },
+    backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.45)" },
+    sheet: {
+      position: "absolute",
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: colors.surface,
+      borderTopLeftRadius: radii.xl,
+      borderTopRightRadius: radii.xl,
+      paddingHorizontal: 20,
+      paddingTop: 12,
+      borderTopWidth: 1,
+      borderColor: colors.border,
+    },
+    handle: {
+      alignSelf: "center",
+      width: 44,
+      height: 4,
+      borderRadius: 2,
+      backgroundColor: colors.border,
+      marginBottom: 16,
+    },
+    sheetTitle: { fontSize: 22, fontWeight: "700", color: colors.textPrimary, marginBottom: 12 },
+    optionRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingVertical: 14,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    optionLabel: { fontSize: 15, color: colors.textPrimary },
   });
