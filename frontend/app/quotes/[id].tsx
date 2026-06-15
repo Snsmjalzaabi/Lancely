@@ -16,6 +16,7 @@ import { ScreenHeader } from "../../components/Header";
 import { quoteTone, StatusBadge } from "../../components/StatusBadge";
 import { api } from "../../lib/api";
 import { fmtDate, useFmtCurrency } from "../../lib/format";
+import { exportQuotePdf } from "../../lib/pdf";
 import { useSettings } from "../../lib/settings";
 import { radii, spacing, type, useTheme, type ColorPalette } from "../../lib/theme";
 import type { Client, Quote } from "../../lib/types";
@@ -30,6 +31,8 @@ export default function QuoteDetail() {
   const [client, setClient] = useState<Client | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const { settings } = useSettings();
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -77,6 +80,21 @@ export default function QuoteDetail() {
     if (!quote) return;
     await api(`/quotes/${quote.id}`, { method: "DELETE" });
     router.back();
+  };
+
+  const onSharePdf = async () => {
+    if (!quote) return;
+    setExporting(true);
+    try {
+      await exportQuotePdf(quote, client, {
+        logoUri: settings.logo_base64 ?? null,
+        businessName: null,
+        currency: settings.currency || "AED",
+        accentColor: settings.accent_color ?? undefined,
+      });
+    } finally {
+      setExporting(false);
+    }
   };
 
   if (loading || !quote) {
@@ -129,6 +147,15 @@ export default function QuoteDetail() {
             <Text style={styles.notes}>{quote.notes}</Text>
           </View>
         ) : null}
+
+        <PrimaryButton
+          label="Share as PDF"
+          variant="secondary"
+          onPress={onSharePdf}
+          loading={exporting}
+          testID="quote-share-pdf"
+          leftIcon={<Ionicons name="share-outline" size={16} color={colors.textPrimary} />}
+        />
 
         {quote.status !== "accepted" && quote.status !== "rejected" ? (
           <View style={{ gap: 10, marginTop: spacing.lg }}>

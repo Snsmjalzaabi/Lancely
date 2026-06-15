@@ -254,6 +254,14 @@ export default function SettingsScreen() {
         {loading ? <ActivityIndicator color={colors.primary} style={{ marginTop: 8 }} /> : null}
 
         <Text style={styles.sectionTitle}>About</Text>
+        <SettingsRow
+          icon="stats-chart-outline"
+          label="Advanced Reports"
+          value={isPro ? "Open" : "PRO"}
+          onPress={() => router.push("/reports")}
+          colors={colors}
+          testID="settings-reports-row"
+        />
         <SettingsRow icon="rocket-outline" label="Version" value="1.0.0 · MVP" colors={colors} testID="settings-version-row" />
         <TouchableOpacity
           style={styles.row}

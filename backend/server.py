@@ -812,6 +812,104 @@ async def dashboard(authorization: Optional[str] = Header(None)):
     }
 
 
+@api_router.get("/reports/summary")
+async def reports_summary(authorization: Optional[str] = Header(None)):
+    """Aggregated analytics for the Advanced Reports screen (Pro feature)."""
+    user = await get_current_user(authorization)
+    uid = user["user_id"]
+
+    invoices = await db.invoices.find({"user_id": uid}, {"_id": 0}).to_list(5000)
+    quotes = await db.quotes.find({"user_id": uid}, {"_id": 0}).to_list(5000)
+    clients = await db.clients.find({"user_id": uid}, {"_id": 0}).to_list(5000)
+    client_map = {c["id"]: c for c in clients}
+
+    # Monthly revenue for the last 6 months (based on paid_date).
+    now = now_utc()
+    months: List[dict] = []
+    for i in range(5, -1, -1):
+        # compute first day of month i months ago
+        y = now.year
+        m = now.month - i
+        while m <= 0:
+            m += 12
+            y -= 1
+        months.append({"y": y, "m": m, "key": f"{y}-{m:02d}", "label": f"{['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][m-1]} {str(y)[-2:]}", "total": 0.0})
+
+    for inv in invoices:
+        pd = ensure_aware(inv.get("paid_date"))
+        if not pd:
+            continue
+        for mb in months:
+            if pd.year == mb["y"] and pd.month == mb["m"]:
+                mb["total"] += inv.get("paid_amount", 0)
+                break
+
+    # Top clients by total paid.
+    paid_by_client: dict = {}
+    for inv in invoices:
+        amt = inv.get("paid_amount", 0)
+        if amt <= 0:
+            continue
+        paid_by_client[inv["client_id"]] = paid_by_client.get(inv["client_id"], 0) + amt
+    top_clients = sorted(paid_by_client.items(), key=lambda x: x[1], reverse=True)[:5]
+    top_clients_out = [
+        {
+            "client_id": cid,
+            "name": client_map.get(cid, {}).get("name", "Unknown"),
+            "company": client_map.get(cid, {}).get("company", ""),
+            "total": round(total, 2),
+        }
+        for cid, total in top_clients
+    ]
+
+    # Average invoice value (paid invoices).
+    paid_invs = [i for i in invoices if i.get("status") == "paid"]
+    avg_invoice = round(sum(i["amount"] for i in paid_invs) / len(paid_invs), 2) if paid_invs else 0.0
+
+    # Quote acceptance rate (accepted / (accepted + rejected + sent considered closed?)).
+    accepted = sum(1 for q in quotes if q.get("status") == "accepted")
+    rejected = sum(1 for q in quotes if q.get("status") == "rejected")
+    total_closed = accepted + rejected
+    acceptance_rate = round(accepted / total_closed * 100, 1) if total_closed else 0.0
+
+    # Outstanding aging buckets (unpaid amounts grouped by overdue days).
+    buckets = {"current": 0.0, "1_30": 0.0, "31_60": 0.0, "61_90": 0.0, "90_plus": 0.0}
+    for inv in invoices:
+        remaining = max(inv["amount"] - inv.get("paid_amount", 0), 0)
+        if remaining <= 0:
+            continue
+        due = ensure_aware(inv.get("due_date"))
+        if not due or due >= now:
+            buckets["current"] += remaining
+            continue
+        days = (now - due).days
+        if days <= 30:
+            buckets["1_30"] += remaining
+        elif days <= 60:
+            buckets["31_60"] += remaining
+        elif days <= 90:
+            buckets["61_90"] += remaining
+        else:
+            buckets["90_plus"] += remaining
+
+    total_invoiced = sum(i["amount"] for i in invoices)
+    total_paid = sum(i.get("paid_amount", 0) for i in invoices)
+
+    return {
+        "monthly_revenue": [{"label": m["label"], "total": round(m["total"], 2)} for m in months],
+        "top_clients": top_clients_out,
+        "avg_invoice_value": avg_invoice,
+        "quote_acceptance_rate": acceptance_rate,
+        "quotes_accepted": accepted,
+        "quotes_rejected": rejected,
+        "quotes_sent": sum(1 for q in quotes if q.get("status") == "sent"),
+        "aging": {k: round(v, 2) for k, v in buckets.items()},
+        "total_invoiced": round(total_invoiced, 2),
+        "total_paid": round(total_paid, 2),
+        "collection_rate": round(total_paid / total_invoiced * 100, 1) if total_invoiced else 0.0,
+    }
+
+
 @api_router.get("/notifications")
 async def notifications(authorization: Optional[str] = Header(None)):
     user = await get_current_user(authorization)

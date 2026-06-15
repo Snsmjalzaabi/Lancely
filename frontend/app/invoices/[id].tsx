@@ -17,6 +17,7 @@ import { ScreenHeader } from "../../components/Header";
 import { invoiceTone, StatusBadge } from "../../components/StatusBadge";
 import { api } from "../../lib/api";
 import { fmtDate, useFmtCurrency } from "../../lib/format";
+import { exportInvoicePdf } from "../../lib/pdf";
 import { useSettings } from "../../lib/settings";
 import { radii, spacing, type, useTheme, type ColorPalette } from "../../lib/theme";
 import type { Client, Invoice } from "../../lib/types";
@@ -33,6 +34,7 @@ export default function InvoiceDetail() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [payAmount, setPayAmount] = useState("");
+  const [exporting, setExporting] = useState(false);
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -97,6 +99,21 @@ export default function InvoiceDetail() {
     if (!invoice) return;
     await api(`/invoices/${invoice.id}`, { method: "DELETE" });
     router.back();
+  };
+
+  const onSharePdf = async () => {
+    if (!invoice) return;
+    setExporting(true);
+    try {
+      await exportInvoicePdf(invoice, client, {
+        logoUri: settings.logo_base64 ?? null,
+        businessName: null,
+        currency: settings.currency || "AED",
+        accentColor: settings.accent_color ?? undefined,
+      });
+    } finally {
+      setExporting(false);
+    }
   };
 
   if (loading || !invoice) {
@@ -178,12 +195,20 @@ export default function InvoiceDetail() {
           </>
         ) : null}
 
+        <PrimaryButton
+          label="Share as PDF"
+          variant="secondary"
+          onPress={onSharePdf}
+          loading={exporting}
+          testID="invoice-share-pdf"
+          leftIcon={<Ionicons name="share-outline" size={16} color={colors.textPrimary} />}
+        />
+
         <TouchableOpacity style={styles.deleteBtn} onPress={onDelete} testID="invoice-delete-button">
           <Ionicons name="trash-outline" size={16} color={colors.errorText} />
           <Text style={styles.deleteText}>Delete invoice</Text>
         </TouchableOpacity>
-      </ScrollView>
-    </View>
+      </ScrollView>    </View>
   );
 }
 
