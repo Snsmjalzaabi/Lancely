@@ -1,14 +1,21 @@
 # Lancely - App Store Screenshots
 
-Generated for iOS App Store distribution.
+Complete screenshot set for iOS App Store distribution.
 
 ## Folder structure:
-- `raw/` — Source captures at native device scale (1284 × 2778, DPR=3)
-- `iphone_6.7_inch_1284x2778/` — For iPhone 12-14 Pro Max (REQUIRED)
+
+### iPhone screenshots
+- `raw/` — iPhone source captures at 1284 x 2778 (DPR=3)
+- `iphone_6.7_inch_1284x2778/` — REQUIRED for iPhone 12-14 Pro Max
 - `iphone_6.5_inch_1242x2688/` — For iPhone XS Max, 11 Pro Max
 - `iphone_6.9_inch_1290x2796/` — For iPhone 15-16 Pro Max
 
-## Screens included:
+### iPad screenshots
+- `ipad_raw/` — iPad source captures at 2064 x 2752 (DPR=2)
+- `ipad_13_inch_2064x2752/` — For iPad Pro 13" (M4)
+- `ipad_12.9_inch_2048x2732/` — For iPad Pro 12.9" (3rd-6th gen)
+
+## Screens included (both iPhone & iPad):
 1. Login — Lancely brand identity
 2. Dashboard — Revenue & KPIs at a glance
 3. Clients — Quick searchable directory
@@ -21,11 +28,10 @@ Generated for iOS App Store distribution.
 10. Notifications — Smart alerts for overdue invoices
 
 ## Upload to App Store Connect:
-1. Go to App Store Connect → your app → Distribution → App Store
+1. Go to App Store Connect → Lancely → Distribution → App Store
 2. Select localization (e.g. English U.S.)
-3. Drag-drop these PNGs into the 6.7" Display section
-4. Repeat for 6.5" if needed (Apple may auto-derive)
+3. iPhone screenshots → drop the `iphone_6.7_inch_1284x2778/` folder
+4. iPad screenshots → drop the `ipad_13_inch_2064x2752/` folder
+5. Apple will auto-derive sizes for smaller devices
 
-Pro tip: For sharpest results, take final screenshots on a real iPhone or
-Xcode Simulator after the build is published. These are great for design
-review and initial submission.
+Both iPhone and iPad sets are pixel-perfect (LANCZOS, DPR-aware capture).
