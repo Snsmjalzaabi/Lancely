@@ -15,10 +15,12 @@ import { Ionicons } from "@expo/vector-icons";
 import { EmptyState } from "../../components/EmptyState";
 import { ScreenHeader } from "../../components/Header";
 import { api } from "../../lib/api";
-import { colors, radii, spacing, type } from "../../lib/theme";
+import { radii, spacing, type, useTheme, type ColorPalette } from "../../lib/theme";
 import type { Client } from "../../lib/types";
 
 export default function ClientsScreen() {
+  const { colors } = useTheme();
+  const styles = makeStyles(colors);
   const router = useRouter();
   const [items, setItems] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
@@ -129,7 +131,7 @@ export default function ClientsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ColorPalette) => StyleSheet.create({
   flex: { flex: 1, backgroundColor: colors.bg },
   searchWrap: {
     flexDirection: "row",

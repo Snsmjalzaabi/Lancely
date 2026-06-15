@@ -1,9 +1,11 @@
 import { Redirect } from "expo-router";
 import { ActivityIndicator, StyleSheet, View } from "react-native";
 import { useAuth } from "../lib/auth";
-import { colors } from "../lib/theme";
+import { useTheme, type ColorPalette } from "../lib/theme";
 
 export default function Index() {
+  const { colors } = useTheme();
+  const styles = makeStyles(colors);
   const { user, loading } = useAuth();
   if (loading) {
     return (
@@ -15,6 +17,6 @@ export default function Index() {
   return user ? <Redirect href="/(tabs)" /> : <Redirect href="/login" />;
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ColorPalette) => StyleSheet.create({
   center: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: colors.bg },
 });

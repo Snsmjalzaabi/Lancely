@@ -16,10 +16,12 @@ import { ScreenHeader } from "../../components/Header";
 import { invoiceTone, StatusBadge } from "../../components/StatusBadge";
 import { api } from "../../lib/api";
 import { fmtAED, fmtDate } from "../../lib/format";
-import { colors, radii, spacing, type } from "../../lib/theme";
+import { radii, spacing, type, useTheme, type ColorPalette } from "../../lib/theme";
 import type { Client, Invoice } from "../../lib/types";
 
 export default function InvoiceDetail() {
+  const { colors } = useTheme();
+  const styles = makeStyles(colors);
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const [invoice, setInvoice] = useState<Invoice | null>(null);
@@ -177,6 +179,8 @@ export default function InvoiceDetail() {
 }
 
 function MetaRow({ label, value }: { label: string; value: string }) {
+  const { colors } = useTheme();
+  const styles = makeStyles(colors);
   return (
     <View style={styles.metaRow}>
       <Text style={styles.metaLabel}>{label}</Text>
@@ -185,7 +189,7 @@ function MetaRow({ label, value }: { label: string; value: string }) {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ColorPalette) => StyleSheet.create({
   flex: { flex: 1, backgroundColor: colors.bg },
   body: { padding: spacing.md, paddingBottom: spacing.xxl },
   heroCard: {
@@ -193,18 +197,18 @@ const styles = StyleSheet.create({
     borderRadius: radii.lg,
     padding: spacing.md,
   },
-  heroLabel: { color: "#C7D5CC", ...type.label },
+  heroLabel: { color: colors.onPrimaryMuted, ...type.label },
   heroValue: { color: colors.textInverse, fontSize: 32, fontWeight: "700", marginTop: 4 },
   heroGrid: {
     flexDirection: "row",
     marginTop: spacing.md,
     paddingTop: spacing.md,
     borderTopWidth: 1,
-    borderTopColor: "rgba(255,255,255,0.15)",
+    borderTopColor: colors.onPrimaryBorder,
     gap: spacing.lg,
   },
   heroCell: { flex: 1 },
-  heroCellLabel: { color: "#C7D5CC", fontSize: 11, fontWeight: "700", letterSpacing: 0.4, textTransform: "uppercase" },
+  heroCellLabel: { color: colors.onPrimaryMuted, fontSize: 11, fontWeight: "700", letterSpacing: 0.4, textTransform: "uppercase" },
   heroCellValue: { color: colors.textInverse, fontSize: 16, fontWeight: "600", marginTop: 4 },
   metaCard: {
     backgroundColor: colors.surface,

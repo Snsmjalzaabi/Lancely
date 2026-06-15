@@ -15,10 +15,12 @@ import { ScreenHeader } from "../../components/Header";
 import { invoiceTone, projectTone, quoteTone, StatusBadge } from "../../components/StatusBadge";
 import { api } from "../../lib/api";
 import { fmtAED, fmtDate } from "../../lib/format";
-import { colors, radii, spacing, type } from "../../lib/theme";
+import { radii, spacing, type, useTheme, type ColorPalette } from "../../lib/theme";
 import type { Client, Invoice, Project, Quote } from "../../lib/types";
 
 export default function ClientProfile() {
+  const { colors } = useTheme();
+  const styles = makeStyles(colors);
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const [client, setClient] = useState<Client | null>(null);
@@ -172,6 +174,8 @@ function QuickAction({
   onPress: () => void;
   testID?: string;
 }) {
+  const { colors } = useTheme();
+  const styles = makeStyles(colors);
   return (
     <TouchableOpacity style={styles.quick} onPress={onPress} testID={testID}>
       <Ionicons name={icon} size={18} color={colors.primary} />
@@ -196,6 +200,8 @@ function SectionList({
     onPress: () => void;
   }[];
 }) {
+  const { colors } = useTheme();
+  const styles = makeStyles(colors);
   return (
     <View style={{ marginTop: spacing.lg }}>
       <Text style={styles.sectionTitle}>{title}</Text>
@@ -221,7 +227,7 @@ function SectionList({
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ColorPalette) => StyleSheet.create({
   flex: { flex: 1, backgroundColor: colors.bg },
   body: { padding: spacing.md, paddingBottom: spacing.xxl },
   headCard: {

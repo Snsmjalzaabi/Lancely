@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { colors, spacing, type } from "../lib/theme";
+import { spacing, type, useTheme, type ColorPalette } from "../lib/theme";
 
 export function ScreenHeader({
   title,
@@ -18,6 +18,8 @@ export function ScreenHeader({
   right?: React.ReactNode;
   bellTo?: string;
 }) {
+  const { colors } = useTheme();
+  const styles = makeStyles(colors);
   const insets = useSafeAreaInsets();
   const router = useRouter();
   return (
@@ -53,7 +55,7 @@ export function ScreenHeader({
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ColorPalette) => StyleSheet.create({
   wrap: {
     paddingBottom: spacing.md,
     paddingHorizontal: spacing.md,

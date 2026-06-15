@@ -1,6 +1,6 @@
 import React from "react";
 import { StyleSheet, Text, TextInput, TextInputProps, View } from "react-native";
-import { colors, radii } from "../lib/theme";
+import { radii, useTheme, type ColorPalette } from "../lib/theme";
 
 export function Input({
   label,
@@ -8,6 +8,8 @@ export function Input({
   multiline,
   ...rest
 }: TextInputProps & { label?: string; testID?: string }) {
+  const { colors } = useTheme();
+  const styles = makeStyles(colors);
   return (
     <View style={{ marginBottom: 12 }}>
       {label ? <Text style={styles.label}>{label}</Text> : null}
@@ -22,7 +24,7 @@ export function Input({
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ColorPalette) => StyleSheet.create({
   label: { fontSize: 13, color: colors.textSecondary, marginBottom: 6, fontWeight: "600" },
   input: {
     backgroundColor: colors.surface,

@@ -13,7 +13,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { ScreenHeader } from "../components/Header";
 import { EmptyState } from "../components/EmptyState";
 import { api } from "../lib/api";
-import { colors, radii, spacing, type } from "../lib/theme";
+import { radii, spacing, type, useTheme, type ColorPalette } from "../lib/theme";
 import type { Notification } from "../lib/types";
 
 const ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
@@ -22,20 +22,24 @@ const ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
   project_due_soon: "briefcase-outline",
   quote_awaiting: "document-text-outline",
 };
-const TONES: Record<string, string> = {
+const getTones = (colors: ColorPalette): Record<string, string> => ({
   invoice_overdue: colors.errorBg,
   invoice_due_soon: colors.warningBg,
   project_due_soon: colors.infoBg,
   quote_awaiting: colors.bgAlt,
-};
-const TONE_FG: Record<string, string> = {
+});
+const getToneFg = (colors: ColorPalette): Record<string, string> => ({
   invoice_overdue: colors.errorText,
   invoice_due_soon: colors.warningText,
   project_due_soon: colors.infoText,
   quote_awaiting: colors.textSecondary,
-};
+});
 
 export default function NotificationsScreen() {
+  const { colors } = useTheme();
+  const styles = makeStyles(colors);
+  const TONES = getTones(colors);
+  const TONE_FG = getToneFg(colors);
   const [items, setItems] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -109,7 +113,7 @@ export default function NotificationsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ColorPalette) => StyleSheet.create({
   flex: { flex: 1, backgroundColor: colors.bg },
   card: {
     flexDirection: "row",

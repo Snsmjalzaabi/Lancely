@@ -15,11 +15,13 @@ import { PrimaryButton } from "../../components/PrimaryButton";
 import { ScreenHeader } from "../../components/Header";
 import { ClientPicker } from "../../components/ClientPicker";
 import { api } from "../../lib/api";
-import { colors, radii, spacing, type } from "../../lib/theme";
+import { radii, spacing, type, useTheme, type ColorPalette } from "../../lib/theme";
 import { PROJECT_STATUSES } from "../../lib/types";
 import type { Client, ProjectStatus } from "../../lib/types";
 
 export default function NewProject() {
+  const { colors } = useTheme();
+  const styles = makeStyles(colors);
   const router = useRouter();
   const params = useLocalSearchParams<{ clientId?: string }>();
   const [clients, setClients] = useState<Client[]>([]);
@@ -124,7 +126,7 @@ export default function NewProject() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ColorPalette) => StyleSheet.create({
   body: { padding: spacing.md, paddingBottom: spacing.xxl },
   label: { fontSize: 13, color: colors.textSecondary, marginBottom: 6, fontWeight: "600", marginTop: 4 },
   statusRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: spacing.md },

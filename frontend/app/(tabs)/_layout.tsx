@@ -3,9 +3,10 @@ import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useAuth } from "../../lib/auth";
-import { colors } from "../../lib/theme";
+import { useTheme } from "../../lib/theme";
 
 export default function TabsLayout() {
+  const { colors } = useTheme();
   const { user, loading } = useAuth();
   const insets = useSafeAreaInsets();
 
@@ -17,7 +18,7 @@ export default function TabsLayout() {
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: colors.primary,
-        tabBarInactiveTintColor: "#A3B19B",
+        tabBarInactiveTintColor: colors.tabInactive,
         tabBarStyle: {
           backgroundColor: colors.surface,
           borderTopColor: colors.border,

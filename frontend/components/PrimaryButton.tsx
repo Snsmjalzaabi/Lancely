@@ -1,6 +1,6 @@
 import React from "react";
 import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { colors, radii } from "../lib/theme";
+import { radii, useTheme, type ColorPalette } from "../lib/theme";
 
 export function PrimaryButton({
   label,
@@ -19,6 +19,8 @@ export function PrimaryButton({
   testID?: string;
   leftIcon?: React.ReactNode;
 }) {
+  const { colors } = useTheme();
+  const styles = makeStyles(colors);
   const isDisabled = !!disabled || !!loading;
   const styleByVariant =
     variant === "secondary"
@@ -48,7 +50,7 @@ export function PrimaryButton({
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ColorPalette) => StyleSheet.create({
   base: {
     paddingVertical: 14,
     paddingHorizontal: 20,

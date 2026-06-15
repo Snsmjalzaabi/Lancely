@@ -15,10 +15,12 @@ import { ScreenHeader } from "../../components/Header";
 import { quoteTone, StatusBadge } from "../../components/StatusBadge";
 import { api } from "../../lib/api";
 import { fmtAED, fmtDate } from "../../lib/format";
-import { colors, radii, spacing, type } from "../../lib/theme";
+import { radii, spacing, type, useTheme, type ColorPalette } from "../../lib/theme";
 import type { Client, Quote } from "../../lib/types";
 
 export default function QuoteDetail() {
+  const { colors } = useTheme();
+  const styles = makeStyles(colors);
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const [quote, setQuote] = useState<Quote | null>(null);
@@ -148,7 +150,7 @@ export default function QuoteDetail() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ColorPalette) => StyleSheet.create({
   flex: { flex: 1, backgroundColor: colors.bg },
   body: { padding: spacing.md, paddingBottom: spacing.xxl },
   headCard: {

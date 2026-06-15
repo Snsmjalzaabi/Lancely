@@ -14,11 +14,13 @@ import { ScreenHeader } from "../../components/Header";
 import { projectTone, StatusBadge } from "../../components/StatusBadge";
 import { api } from "../../lib/api";
 import { fmtAED, fmtDate } from "../../lib/format";
-import { colors, radii, spacing, type } from "../../lib/theme";
+import { radii, spacing, type, useTheme, type ColorPalette } from "../../lib/theme";
 import type { Client, Project, ProjectStatus } from "../../lib/types";
 import { PROJECT_STATUSES } from "../../lib/types";
 
 export default function ProjectDetail() {
+  const { colors } = useTheme();
+  const styles = makeStyles(colors);
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const [project, setProject] = useState<Project | null>(null);
@@ -122,7 +124,7 @@ export default function ProjectDetail() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ColorPalette) => StyleSheet.create({
   flex: { flex: 1, backgroundColor: colors.bg },
   body: { padding: spacing.md, paddingBottom: spacing.xxl },
   card: {

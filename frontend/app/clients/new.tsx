@@ -12,9 +12,11 @@ import { Input } from "../../components/Input";
 import { PrimaryButton } from "../../components/PrimaryButton";
 import { ScreenHeader } from "../../components/Header";
 import { api } from "../../lib/api";
-import { colors, spacing } from "../../lib/theme";
+import { spacing, useTheme, type ColorPalette } from "../../lib/theme";
 
 export default function NewClient() {
+  const { colors } = useTheme();
+  const styles = makeStyles(colors);
   const router = useRouter();
   const [form, setForm] = useState({ name: "", company: "", email: "", phone: "", notes: "" });
   const [saving, setSaving] = useState(false);
@@ -96,6 +98,6 @@ export default function NewClient() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ColorPalette) => StyleSheet.create({
   body: { padding: spacing.md, paddingBottom: spacing.xxl },
 });

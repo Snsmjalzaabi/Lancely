@@ -14,11 +14,13 @@ import { Ionicons } from "@expo/vector-icons";
 import { ScreenHeader } from "../../components/Header";
 import { api } from "../../lib/api";
 import { fmtAED, fmtDateShort } from "../../lib/format";
-import { colors, radii, spacing, type } from "../../lib/theme";
+import { radii, spacing, type, useTheme, type ColorPalette } from "../../lib/theme";
 import type { Client, Project, ProjectStatus } from "../../lib/types";
 import { PROJECT_STATUSES } from "../../lib/types";
 
 export default function ProjectsScreen() {
+  const { colors } = useTheme();
+  const styles = makeStyles(colors);
   const router = useRouter();
   const { width } = useWindowDimensions();
   const colWidth = Math.max(260, Math.round(width * 0.78));
@@ -170,7 +172,7 @@ export default function ProjectsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ColorPalette) => StyleSheet.create({
   flex: { flex: 1, backgroundColor: colors.bg },
   col: {
     marginRight: 12,

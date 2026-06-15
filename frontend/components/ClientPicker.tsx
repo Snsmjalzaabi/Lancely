@@ -1,6 +1,6 @@
 import React from "react";
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { colors, radii } from "../lib/theme";
+import { radii, useTheme, type ColorPalette } from "../lib/theme";
 import type { Client } from "../lib/types";
 
 export function ClientPicker({
@@ -12,6 +12,8 @@ export function ClientPicker({
   value: string;
   onChange: (id: string) => void;
 }) {
+  const { colors } = useTheme();
+  const styles = makeStyles(colors);
   return (
     <View style={{ marginBottom: 12 }}>
       <Text style={styles.label}>Client *</Text>
@@ -46,7 +48,7 @@ export function ClientPicker({
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ColorPalette) => StyleSheet.create({
   label: { fontSize: 13, color: colors.textSecondary, marginBottom: 6, fontWeight: "600" },
   row: { gap: 8, paddingVertical: 4 },
   chip: {

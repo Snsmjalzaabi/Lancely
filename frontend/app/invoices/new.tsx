@@ -13,10 +13,12 @@ import { PrimaryButton } from "../../components/PrimaryButton";
 import { ScreenHeader } from "../../components/Header";
 import { ClientPicker } from "../../components/ClientPicker";
 import { api } from "../../lib/api";
-import { colors, spacing } from "../../lib/theme";
+import { spacing, useTheme, type ColorPalette } from "../../lib/theme";
 import type { Client } from "../../lib/types";
 
 export default function NewInvoice() {
+  const { colors } = useTheme();
+  const styles = makeStyles(colors);
   const router = useRouter();
   const params = useLocalSearchParams<{ clientId?: string }>();
   const [clients, setClients] = useState<Client[]>([]);
@@ -102,6 +104,6 @@ export default function NewInvoice() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ColorPalette) => StyleSheet.create({
   body: { padding: spacing.md, paddingBottom: spacing.xxl },
 });

@@ -17,10 +17,12 @@ import { ScreenHeader } from "../../components/Header";
 import { ClientPicker } from "../../components/ClientPicker";
 import { api } from "../../lib/api";
 import { fmtAED } from "../../lib/format";
-import { colors, radii, spacing, type } from "../../lib/theme";
+import { radii, spacing, type, useTheme, type ColorPalette } from "../../lib/theme";
 import type { Client, QuoteItem } from "../../lib/types";
 
 export default function NewQuote() {
+  const { colors } = useTheme();
+  const styles = makeStyles(colors);
   const router = useRouter();
   const params = useLocalSearchParams<{ clientId?: string }>();
   const [clients, setClients] = useState<Client[]>([]);
@@ -148,7 +150,7 @@ export default function NewQuote() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ColorPalette) => StyleSheet.create({
   body: { padding: spacing.md, paddingBottom: spacing.xxl },
   section: { ...type.h3, color: colors.textPrimary, marginTop: 4, marginBottom: 8 },
   itemCard: {

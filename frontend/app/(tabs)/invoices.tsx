@@ -17,7 +17,7 @@ import { ScreenHeader } from "../../components/Header";
 import { invoiceTone, StatusBadge } from "../../components/StatusBadge";
 import { api } from "../../lib/api";
 import { fmtAED, fmtDate } from "../../lib/format";
-import { colors, radii, spacing, type } from "../../lib/theme";
+import { radii, spacing, type, useTheme, type ColorPalette } from "../../lib/theme";
 import type { Client, Invoice, InvoiceStatus } from "../../lib/types";
 
 type FilterKey = "all" | InvoiceStatus;
@@ -30,6 +30,8 @@ const FILTERS: { key: FilterKey; label: string }[] = [
 ];
 
 export default function InvoicesScreen() {
+  const { colors } = useTheme();
+  const styles = makeStyles(colors);
   const router = useRouter();
   const [items, setItems] = useState<Invoice[]>([]);
   const [clients, setClients] = useState<Record<string, Client>>({});
@@ -176,6 +178,8 @@ function Metric({
   tone: "success" | "warning" | "error";
   testID?: string;
 }) {
+  const { colors } = useTheme();
+  const styles = makeStyles(colors);
   const bg =
     tone === "success" ? colors.successBg : tone === "warning" ? colors.warningBg : colors.errorBg;
   const fg =
@@ -190,7 +194,7 @@ function Metric({
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ColorPalette) => StyleSheet.create({
   flex: { flex: 1, backgroundColor: colors.bg },
   stickyHead: {
     paddingTop: spacing.md,

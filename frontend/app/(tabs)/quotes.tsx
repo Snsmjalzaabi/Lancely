@@ -16,10 +16,12 @@ import { ScreenHeader } from "../../components/Header";
 import { quoteTone, StatusBadge } from "../../components/StatusBadge";
 import { api } from "../../lib/api";
 import { fmtAED, fmtDate } from "../../lib/format";
-import { colors, radii, spacing, type } from "../../lib/theme";
+import { radii, spacing, type, useTheme, type ColorPalette } from "../../lib/theme";
 import type { Client, Quote } from "../../lib/types";
 
 export default function QuotesScreen() {
+  const { colors } = useTheme();
+  const styles = makeStyles(colors);
   const router = useRouter();
   const [items, setItems] = useState<Quote[]>([]);
   const [clients, setClients] = useState<Record<string, Client>>({});
@@ -112,7 +114,7 @@ export default function QuotesScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ColorPalette) => StyleSheet.create({
   flex: { flex: 1, backgroundColor: colors.bg },
   row: {
     flexDirection: "row",

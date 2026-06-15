@@ -7,8 +7,24 @@ import { StatusBar } from "expo-status-bar";
 
 import { useIconFonts } from "@/src/hooks/use-icon-fonts";
 import { AuthProvider } from "../lib/auth";
+import { ThemeProvider, useTheme } from "../lib/theme";
 
 SplashScreen.preventAutoHideAsync();
+
+function ThemedShell() {
+  const { colors, theme } = useTheme();
+  return (
+    <>
+      <StatusBar style={theme.colors.statusBar} />
+      <Stack
+        screenOptions={{
+          headerShown: false,
+          contentStyle: { backgroundColor: colors.bg },
+        }}
+      />
+    </>
+  );
+}
 
 export default function RootLayout() {
   const [loaded, error] = useIconFonts();
@@ -24,15 +40,11 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
-        <AuthProvider>
-          <StatusBar style="dark" />
-          <Stack
-            screenOptions={{
-              headerShown: false,
-              contentStyle: { backgroundColor: "#F9F9F6" },
-            }}
-          />
-        </AuthProvider>
+        <ThemeProvider>
+          <AuthProvider>
+            <ThemedShell />
+          </AuthProvider>
+        </ThemeProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

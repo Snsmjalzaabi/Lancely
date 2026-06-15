@@ -12,14 +12,17 @@ import { useFocusEffect, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 
 import { ScreenHeader } from "../../components/Header";
+import { ThemePickerTrigger } from "../../components/ThemePicker";
 import { api } from "../../lib/api";
 import { useAuth } from "../../lib/auth";
 import { fmtAED } from "../../lib/format";
-import { colors, radii, shadow, spacing, type } from "../../lib/theme";
+import { radii, shadow, spacing, type, useTheme, type ColorPalette } from "../../lib/theme";
 import type { DashboardStats, Invoice, Notification } from "../../lib/types";
 import { invoiceTone, StatusBadge } from "../../components/StatusBadge";
 
 export default function Dashboard() {
+  const { colors } = useTheme();
+  const styles = makeStyles(colors);
   const { user, signOut } = useAuth();
   const router = useRouter();
   const [stats, setStats] = useState<DashboardStats | null>(null);
@@ -70,9 +73,12 @@ export default function Dashboard() {
         title={`Hi, ${user?.name?.split(" ")[0] ?? "there"}`}
         subtitle="Here's your business at a glance"
         right={
-          <TouchableOpacity onPress={signOut} style={styles.iconBtn} testID="dashboard-logout-button">
-            <Ionicons name="log-out-outline" size={20} color={colors.textPrimary} />
-          </TouchableOpacity>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+            <ThemePickerTrigger />
+            <TouchableOpacity onPress={signOut} style={styles.iconBtn} testID="dashboard-logout-button">
+              <Ionicons name="log-out-outline" size={20} color={colors.textPrimary} />
+            </TouchableOpacity>
+          </View>
         }
         bellTo="/notifications"
       />
@@ -206,6 +212,8 @@ function KpiTile({
   onPress: () => void;
   testID?: string;
 }) {
+  const { colors } = useTheme();
+  const styles = makeStyles(colors);
   return (
     <TouchableOpacity style={styles.kpi} onPress={onPress} testID={testID} activeOpacity={0.8}>
       <View style={[styles.kpiIcon, { backgroundColor: tint }]}>
@@ -228,6 +236,8 @@ function SectionHeader({
   actionLabel?: string;
   onAction?: () => void;
 }) {
+  const { colors } = useTheme();
+  const styles = makeStyles(colors);
   return (
     <View style={styles.sectionHead}>
       <Text style={styles.sectionTitle}>{title}</Text>
@@ -240,7 +250,7 @@ function SectionHeader({
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ColorPalette) => StyleSheet.create({
   flex: { flex: 1, backgroundColor: colors.bg },
   scroll: { paddingHorizontal: spacing.md, paddingTop: spacing.md, paddingBottom: spacing.xxl },
   iconBtn: {
@@ -257,7 +267,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
     ...shadow,
   },
-  heroLabel: { color: "#C7D5CC", ...type.label, textTransform: "uppercase" },
+  heroLabel: { color: colors.onPrimaryMuted, ...type.label, textTransform: "uppercase" },
   heroValue: { color: colors.textInverse, fontSize: 34, lineHeight: 40, fontWeight: "700", marginTop: 6 },
   heroFooter: {
     flexDirection: "row",
@@ -265,9 +275,9 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
     paddingTop: spacing.md,
     borderTopWidth: 1,
-    borderTopColor: "rgba(255,255,255,0.15)",
+    borderTopColor: colors.onPrimaryBorder,
   },
-  heroSubLabel: { color: "#C7D5CC", fontSize: 11, fontWeight: "600", letterSpacing: 0.4 },
+  heroSubLabel: { color: colors.onPrimaryMuted, fontSize: 11, fontWeight: "600", letterSpacing: 0.4 },
   heroSubValue: { color: colors.textInverse, fontSize: 16, fontWeight: "600", marginTop: 4 },
   grid: { flexDirection: "row", flexWrap: "wrap", gap: 12, marginBottom: spacing.md },
   kpi: {

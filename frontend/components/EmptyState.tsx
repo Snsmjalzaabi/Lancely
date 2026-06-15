@@ -1,7 +1,7 @@
 import React from "react";
 import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { colors, radii, spacing, type } from "../lib/theme";
+import { radii, spacing, type, useTheme, type ColorPalette } from "../lib/theme";
 
 export function EmptyState({
   icon = "sparkles-outline",
@@ -18,6 +18,8 @@ export function EmptyState({
   onAction?: () => void;
   testID?: string;
 }) {
+  const { colors } = useTheme();
+  const styles = makeStyles(colors);
   return (
     <View style={styles.wrap} testID={testID}>
       <View style={styles.iconWrap}>
@@ -34,7 +36,7 @@ export function EmptyState({
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ColorPalette) => StyleSheet.create({
   wrap: { alignItems: "center", padding: spacing.xl, gap: 8 },
   iconWrap: {
     width: 64,
