@@ -88,7 +88,7 @@ export default function QuoteDetail() {
     try {
       await exportQuotePdf(quote, client, {
         logoUri: settings.logo_base64 ?? null,
-        businessName: null,
+        businessName: settings.business_name || null,
         currency: settings.currency || "AED",
         accentColor: settings.accent_color ?? undefined,
       });

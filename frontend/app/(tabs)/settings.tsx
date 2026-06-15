@@ -8,6 +8,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -219,6 +220,26 @@ export default function SettingsScreen() {
               </View>
             </View>
           </View>
+
+          <View style={styles.divider} />
+
+          <Text style={styles.brandLabel}>Business name</Text>
+          <Text style={styles.brandHint}>Appears next to your logo on PDFs.</Text>
+          <TextInput
+            value={settings.business_name || ""}
+            onChangeText={(v) => {
+              if (!isPro) {
+                goPro();
+                return;
+              }
+              update({ business_name: v });
+            }}
+            placeholder="e.g. Crescent Studios"
+            placeholderTextColor={colors.textMuted}
+            style={styles.bizInput}
+            maxLength={80}
+            testID="settings-business-name-input"
+          />
 
           <View style={styles.divider} />
 
@@ -527,6 +548,18 @@ const makeStyles = (colors: ColorPalette) =>
       borderColor: colors.border,
     },
     smallGhostText: { color: colors.textSecondary, fontWeight: "600", fontSize: 13 },
+    bizInput: {
+      marginTop: 8,
+      borderWidth: 1,
+      borderColor: colors.border,
+      backgroundColor: colors.bg,
+      borderRadius: radii.md,
+      paddingHorizontal: 14,
+      paddingVertical: 10,
+      fontSize: 14,
+      color: colors.textPrimary,
+      minHeight: 44,
+    },
     divider: {
       height: 1,
       backgroundColor: colors.border,

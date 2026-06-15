@@ -9,6 +9,7 @@ export type UserSettings = {
   timezone: string;
   accent_color: string | null;
   logo_base64: string | null;
+  business_name: string;
 };
 
 export type SettingsOptions = {
@@ -22,6 +23,7 @@ const DEFAULTS: UserSettings = {
   timezone: "device",
   accent_color: null,
   logo_base64: null,
+  business_name: "",
 };
 
 type Ctx = {

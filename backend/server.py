@@ -158,6 +158,7 @@ class UserSettings(BaseModel):
     timezone: str = "device"  # "device" or IANA tz id
     accent_color: Optional[str] = None  # hex like "#A855F7"; None = follow theme
     logo_base64: Optional[str] = None  # data URI or raw base64
+    business_name: Optional[str] = ""  # shown on PDFs alongside the logo
 
 
 class InvoiceIn(BaseModel):
@@ -910,6 +911,53 @@ async def reports_summary(authorization: Optional[str] = Header(None)):
     }
 
 
+@api_router.get("/reports/invoices.csv")
+async def reports_invoices_csv(authorization: Optional[str] = Header(None)):
+    """Download all invoices as a CSV (Pro-grade convenience)."""
+    import csv
+    import io
+    from fastapi.responses import Response
+
+    user = await get_current_user(authorization)
+    uid = user["user_id"]
+    invoices = await db.invoices.find({"user_id": uid}, {"_id": 0}).to_list(5000)
+    clients = await db.clients.find({"user_id": uid}, {"_id": 0}).to_list(5000)
+    client_map = {c["id"]: c for c in clients}
+
+    buf = io.StringIO()
+    writer = csv.writer(buf)
+    writer.writerow([
+        "Invoice #", "Client", "Company", "Amount", "Paid", "Outstanding", "Status",
+        "Due date", "Paid date", "Issued", "Notes",
+    ])
+    for inv in invoices:
+        c = client_map.get(inv["client_id"], {})
+        paid = inv.get("paid_amount", 0)
+        amount = inv.get("amount", 0)
+        outstanding = max(amount - paid, 0)
+        due = ensure_aware(inv.get("due_date"))
+        paid_d = ensure_aware(inv.get("paid_date"))
+        created = ensure_aware(inv.get("created_at"))
+        writer.writerow([
+            inv.get("invoice_number", ""),
+            c.get("name", ""),
+            c.get("company", ""),
+            f"{amount:.2f}",
+            f"{paid:.2f}",
+            f"{outstanding:.2f}",
+            inv.get("status", ""),
+            due.strftime("%Y-%m-%d") if due else "",
+            paid_d.strftime("%Y-%m-%d") if paid_d else "",
+            created.strftime("%Y-%m-%d") if created else "",
+            (inv.get("notes") or "").replace("\n", " "),
+        ])
+    return Response(
+        content=buf.getvalue(),
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=solvio-invoices.csv"},
+    )
+
+
 @api_router.get("/notifications")
 async def notifications(authorization: Optional[str] = Header(None)):
     user = await get_current_user(authorization)
@@ -1015,6 +1063,7 @@ async def update_settings(body: UserSettings, authorization: Optional[str] = Hea
         "timezone": body.timezone or "device",
         "accent_color": accent,
         "logo_base64": logo,
+        "business_name": (body.business_name or "").strip()[:80],
     }
     await db.users.update_one(
         {"user_id": user["user_id"]}, {"$set": {"settings": payload, "updated_at": now_utc()}}

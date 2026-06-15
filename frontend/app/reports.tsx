@@ -10,10 +10,13 @@ import {
 } from "react-native";
 import { useFocusEffect, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import { Platform } from "react-native";
+import * as FileSystem from "expo-file-system";
+import * as Sharing from "expo-sharing";
 
 import { EmptyState } from "../components/EmptyState";
 import { ScreenHeader } from "../components/Header";
-import { api } from "../lib/api";
+import { api, getToken } from "../lib/api";
 import { useAuth } from "../lib/auth";
 import { useFmtCurrency } from "../lib/format";
 import {
@@ -213,12 +216,54 @@ export default function ReportsScreen() {
           </View>
         </View>
 
+        <TouchableOpacity
+          style={styles.csvBtn}
+          onPress={exportInvoicesCsv}
+          testID="reports-export-csv"
+          activeOpacity={0.85}
+        >
+          <Ionicons name="download-outline" size={18} color={colors.textInverse} />
+          <Text style={styles.csvText}>Export invoices CSV</Text>
+        </TouchableOpacity>
+
         <TouchableOpacity onPress={() => router.back()} style={styles.doneBtn} testID="reports-done-button">
           <Text style={styles.doneText}>Done</Text>
         </TouchableOpacity>
       </ScrollView>
     </View>
   );
+}
+
+async function exportInvoicesCsv() {
+  const base = process.env.EXPO_PUBLIC_BACKEND_URL;
+  const tok = await getToken();
+  const url = `${base}/api/reports/invoices.csv`;
+  if (Platform.OS === "web") {
+    if (typeof window !== "undefined") {
+      const r = await fetch(url, { headers: tok ? { Authorization: `Bearer ${tok}` } : {} });
+      const blob = await r.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = blobUrl;
+      a.download = "solvio-invoices.csv";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(blobUrl);
+    }
+    return;
+  }
+  const target = `${FileSystem.cacheDirectory}solvio-invoices.csv`;
+  const dl = await FileSystem.downloadAsync(url, target, {
+    headers: tok ? { Authorization: `Bearer ${tok}` } : undefined,
+  });
+  if ((await Sharing.isAvailableAsync())) {
+    await Sharing.shareAsync(dl.uri, {
+      mimeType: "text/csv",
+      dialogTitle: "Solvio invoices CSV",
+      UTI: "public.comma-separated-values-text",
+    });
+  }
 }
 
 function KpiTile({
@@ -349,4 +394,15 @@ const makeStyles = (colors: ColorPalette) =>
       borderColor: colors.border,
     },
     doneText: { color: colors.textSecondary, fontWeight: "600" },
+    csvBtn: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 8,
+      backgroundColor: colors.primary,
+      borderRadius: radii.md,
+      paddingVertical: 14,
+      marginTop: spacing.md,
+    },
+    csvText: { color: colors.textInverse, fontWeight: "700", fontSize: 14 },
   });

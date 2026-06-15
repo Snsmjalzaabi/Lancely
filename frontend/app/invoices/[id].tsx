@@ -107,7 +107,7 @@ export default function InvoiceDetail() {
     try {
       await exportInvoicePdf(invoice, client, {
         logoUri: settings.logo_base64 ?? null,
-        businessName: null,
+        businessName: settings.business_name || null,
         currency: settings.currency || "AED",
         accentColor: settings.accent_color ?? undefined,
       });
