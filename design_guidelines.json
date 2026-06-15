@@ -1,0 +1,122 @@
+{
+  "project_name": "Solvio",
+  "app_type": "Mobile App (React Native + Expo)",
+  "theme": "LIGHT",
+  "archetype": "Archetype 1: Organic & Earthy",
+  "design_philosophy": "A grounded, stress-free operating system for freelancers. Relies on warm earth tones to create a sense of trust and calmness around finances, with precise high-contrast typography for readability. Breaks standard SaaS flatness with optical clarity and generous spacing.",
+  "colors": {
+    "background_primary": "#F9F9F6",
+    "background_secondary": "#F0F0EB",
+    "surface_card": "#FFFFFF",
+    "primary": "#2C5545",
+    "primary_hover": "#1E3F20",
+    "secondary": "#D1D5CB",
+    "text_primary": "#1A1C19",
+    "text_secondary": "#5E635C",
+    "text_inverse": "#FFFFFF",
+    "border_light": "#E5E5E0",
+    "border_focus": "#2C5545",
+    "status": {
+      "success_bg": "#E8F3E9",
+      "success_text": "#1E3F20",
+      "warning_bg": "#FFF4E5",
+      "warning_text": "#B36B00",
+      "error_bg": "#FCECEC",
+      "error_text": "#A94438",
+      "info_bg": "#E5F0F9",
+      "info_text": "#1A5C87"
+    }
+  },
+  "typography": {
+    "font_family": {
+      "heading": "Outfit",
+      "body": "Manrope"
+    },
+    "hierarchy_react_native": {
+      "h1": { "fontSize": 32, "lineHeight": 40, "fontFamily": "Outfit_700Bold", "letterSpacing": -0.5 },
+      "h2": { "fontSize": 24, "lineHeight": 32, "fontFamily": "Outfit_600SemiBold", "letterSpacing": -0.3 },
+      "h3": { "fontSize": 20, "lineHeight": 28, "fontFamily": "Outfit_600SemiBold", "letterSpacing": 0 },
+      "body_large": { "fontSize": 16, "lineHeight": 24, "fontFamily": "Manrope_500Medium" },
+      "body_regular": { "fontSize": 14, "lineHeight": 20, "fontFamily": "Manrope_400Regular" },
+      "label_small": { "fontSize": 12, "lineHeight": 16, "fontFamily": "Manrope_600SemiBold", "textTransform": "uppercase", "letterSpacing": 0.5 }
+    }
+  },
+  "spacing_and_layout": {
+    "global_padding": 24,
+    "card_padding": 16,
+    "card_radius": 16,
+    "button_radius": 12,
+    "input_radius": 12,
+    "gap_small": 8,
+    "gap_medium": 16,
+    "gap_large": 24,
+    "shadows": {
+      "sm": "shadowColor: '#1A1C19', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2"
+    }
+  },
+  "components": {
+    "buttons": {
+      "primary": "BackgroundColor: #2C5545, BorderRadius: 12, PaddingVertical: 16, PaddingHorizontal: 24. Flex center. Text: #FFFFFF, Outfit_600SemiBold, 16px.",
+      "secondary": "BackgroundColor: #F0F0EB, BorderRadius: 12, PaddingVertical: 16, PaddingHorizontal: 24. Flex center. Text: #1A1C19.",
+      "fab": "Absolute positioning (bottom 24px, right 24px). BackgroundColor: #2C5545. Width/Height: 56px. BorderRadius: 28px. Shadow for depth. Z-index: 50."
+    },
+    "cards": {
+      "dashboard_kpi": "BackgroundColor: #FFFFFF, BorderRadius: 16, Padding: 16, BorderWidth: 1, BorderColor: #E5E5E0. Layout: Icon + Title row, followed by large Value text ('AED 4,500').",
+      "list_item": "BackgroundColor: #FFFFFF, BorderRadius: 16, Padding: 16, MarginBottom: 12, BorderWidth: 1, BorderColor: #E5E5E0. Flex row space-between.",
+      "kanban_card": "BackgroundColor: #FFFFFF, BorderRadius: 12, Padding: 16, BorderWidth: 1, BorderColor: #E5E5E0. Left-aligned text. MarginBottom: 12."
+    },
+    "inputs": {
+      "text_input": "BackgroundColor: #FFFFFF, BorderWidth: 1, BorderColor: #E5E5E0, BorderRadius: 12, PaddingHorizontal: 16, PaddingVertical: 14. Text: 16px Manrope_400Regular. Focus state: BorderColor: #2C5545.",
+      "search_bar": "BackgroundColor: #F0F0EB, BorderRadius: 12, PaddingHorizontal: 16, PaddingVertical: 12. Flex row items-center. BorderWidth: 0."
+    },
+    "navigation": {
+      "bottom_tab": "BackgroundColor: #FFFFFF, BorderTopWidth: 1, BorderTopColor: #E5E5E0, PaddingTop: 8, PaddingBottom: 24. Active icon tint: #2C5545, Inactive: #A3B19B.",
+      "header": "BackgroundColor: #F9F9F6, PaddingTop: 48, PaddingBottom: 16, PaddingHorizontal: 24. Flex row space-between items-center. Z-index: 50."
+    },
+    "badges": {
+      "paid": "BackgroundColor: #E8F3E9, PaddingHorizontal: 8, PaddingVertical: 4, BorderRadius: 6. Text: #1E3F20, 12px, Manrope_600SemiBold, Uppercase.",
+      "overdue": "BackgroundColor: #FCECEC, PaddingHorizontal: 8, PaddingVertical: 4, BorderRadius: 6. Text: #A94438, 12px, Manrope_600SemiBold, Uppercase.",
+      "pending": "BackgroundColor: #FFF4E5, PaddingHorizontal: 8, PaddingVertical: 4, BorderRadius: 6. Text: #B36B00, 12px, Manrope_600SemiBold, Uppercase."
+    }
+  },
+  "screens": [
+    {
+      "name": "Auth",
+      "layout": "Vertical stack, centered content. Top: Brand Logo 'Solvio' (Outfit_700Bold, large). Middle: Input forms (Email, Password) with 16px gap. Bottom: Primary Login CTA. Background: #F9F9F6."
+    },
+    {
+      "name": "Dashboard",
+      "layout": "ScrollView. Header: 'Hello, [Name]' + Avatar. Section 1: 2-column grid for KPIs (Active Clients, Projects). Section 2: Full-width high-contrast card for 'Revenue This Month'. Section 3: 'Pending/Overdue Invoices' horizontal ScrollView."
+    },
+    {
+      "name": "Clients List",
+      "layout": "Header with 'Add Client' plus button. Search bar sticky below header. FlatList of clients (Avatar, Name, Recent Project, Status tag)."
+    },
+    {
+      "name": "Client Profile",
+      "layout": "Top section: Contact info and quick actions (Email, Call) in secondary buttons. Tabbed view or stacked sections below: Projects, Quotes, Invoices related to client."
+    },
+    {
+      "name": "Quote & Invoice Generator",
+      "layout": "Form ScrollView. Client selector dropdown. Line items section with 'Add Item' text button. Total calculation fixed at the bottom above a full-width 'Generate' Primary CTA."
+    },
+    {
+      "name": "Project Kanban",
+      "layout": "Horizontal ScrollView containing vertical columns (Lead, Proposal, In Progress, Review, Completed). Each column has a fixed width (e.g., 85% of screen width) so the next column visually peeks out to suggest swiping. Vertical ScrollView inside each column for cards."
+    }
+  ],
+  "iconography_and_assets": {
+    "icon_library": "lucide-react-native",
+    "avatar_placeholder": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAzOTB8MHwxfHNlYXJjaHwxfHxwcm9mZXNzaW9uYWwlMjBwb3J0cmFpdCUyMGhlYWRzaG90fGVufDB8fHx8MTc4MTU1MDA5MHww&ixlib=rb-4.1.0&q=85",
+    "empty_state_image": "https://images.unsplash.com/photo-1743389412243-7dbfdf6c48dd?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA3MDB8MHwxfHNlYXJjaHwyfHxmcmVlbGFuY2VyJTIwd29ya2luZyUyMGNhZmV8ZW58MHx8fHwxNzgxNTUwMDkwfDA&ixlib=rb-4.1.0&q=85"
+  },
+  "testing_attributes": {
+    "rule": "All interactive and key informational elements MUST include a testID attribute.",
+    "examples": [
+      "testID='login-submit-button'",
+      "testID='dashboard-revenue-card'",
+      "testID='add-client-fab'",
+      "testID='invoice-generate-btn'"
+    ]
+  }
+}
