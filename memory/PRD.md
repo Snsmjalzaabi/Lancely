@@ -77,3 +77,14 @@ their business. Lancely replaces all of that with one calm mobile dashboard.
 3. Send a quote in under 60 seconds ✅ (client chip + items + total).
 4. Generate an invoice in under 30 seconds ✅ (3 required fields).
 5. Know who owes money at a glance ✅ (dashboard hero + outstanding section + Money tab metrics).
+
+## RevenueCat Integration (Pro Subscriptions, iOS only — v1.0.1)
+
+- **Frontend:** `react-native-purchases@10.3.0` installed. Lazy-loaded via `lib/revenuecat.ts` so Expo Go/web don't crash.
+- **Pro paywall** (`app/pro.tsx`): Real annual + monthly package cards on iOS native builds, mocked AED 29 fallback on web/Android.
+- **Backend webhook**: `POST /api/webhooks/revenuecat` — verifies `Authorization` header against `REVENUECAT_WEBHOOK_SECRET`, maps RC events to `is_pro` (GRANT events: INITIAL_PURCHASE, RENEWAL, etc.; REVOKE events: CANCELLATION, EXPIRATION, REFUND).
+- **Restore Purchases** button shown on iOS native (required by Apple).
+- **App Store products**: `lancely_pro_monthly` ($9.99/mo) and `lancely_pro_annual` ($79.99/yr) — both in group "Lancely Pro" with `pro` entitlement.
+- **Public iOS SDK key** lives in `frontend/.env` as `EXPO_PUBLIC_REVENUECAT_IOS_KEY`. Safe to commit (public key).
+- **Webhook secret** lives in `backend/.env` as `REVENUECAT_WEBHOOK_SECRET`. NEVER share.
+- **Requires native build** — won't work in Expo Go or web preview. Test only after Publish.

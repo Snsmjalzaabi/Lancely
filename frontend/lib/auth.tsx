@@ -4,6 +4,7 @@ import * as Linking from "expo-linking";
 import { Platform } from "react-native";
 
 import { api, clearToken, setToken, getToken } from "./api";
+import { configureRevenueCat } from "./revenuecat";
 import type { User } from "./types";
 
 type AuthState = {
@@ -36,6 +37,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       const me = await api<User>("/auth/me");
       setUser(me);
+      // Configure RevenueCat with our backend user id so receipts are bound
+      // to the same user across devices. Safe to call repeatedly.
+      if (me?.user_id) {
+        await configureRevenueCat(me.user_id);
+      }
     } catch {
       await clearToken();
       setUser(null);

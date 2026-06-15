@@ -294,6 +294,88 @@ async def downgrade_from_pro(authorization: Optional[str] = Header(None)):
     )
 
 
+# ------------------------- RevenueCat Webhook -------------------------
+
+REVENUECAT_WEBHOOK_SECRET = os.environ.get("REVENUECAT_WEBHOOK_SECRET", "")
+
+# RevenueCat sends these event types. We map them to is_pro state.
+_RC_GRANT_EVENTS = {
+    "INITIAL_PURCHASE",
+    "RENEWAL",
+    "PRODUCT_CHANGE",
+    "UNCANCELLATION",
+    "NON_RENEWING_PURCHASE",
+    "TRANSFER",
+}
+_RC_REVOKE_EVENTS = {
+    "CANCELLATION",
+    "EXPIRATION",
+    "REFUND",
+    "SUBSCRIPTION_PAUSED",
+}
+
+
+@api_router.post("/webhooks/revenuecat")
+async def revenuecat_webhook(request: Request, authorization: Optional[str] = Header(None)):
+    """Receive RevenueCat events and flip is_pro accordingly.
+
+    Configure in RevenueCat: Project Settings → Integrations → Webhooks
+      URL: https://<host>/api/webhooks/revenuecat
+      Authorization header value: matches REVENUECAT_WEBHOOK_SECRET in backend .env
+    """
+    # 1. Verify shared secret (RevenueCat sends it as a raw Authorization header value)
+    if not REVENUECAT_WEBHOOK_SECRET or authorization != REVENUECAT_WEBHOOK_SECRET:
+        logger.warning("RevenueCat webhook rejected: bad/missing auth header")
+        raise HTTPException(status_code=401, detail="unauthorized")
+
+    try:
+        payload = await request.json()
+    except Exception:
+        raise HTTPException(status_code=400, detail="invalid json")
+
+    event = (payload or {}).get("event", {}) or {}
+    event_type = event.get("type")
+    # RC's app_user_id is what we passed in configureRevenueCat(userId).
+    # For Lancely, that's our internal user_id.
+    app_user_id = event.get("app_user_id") or event.get("original_app_user_id")
+    product_id = event.get("product_id")
+
+    if not event_type or not app_user_id:
+        # Acknowledge so RevenueCat doesn't retry — bad payload from non-prod tests.
+        return {"ok": True, "ignored": True}
+
+    grant = event_type in _RC_GRANT_EVENTS
+    revoke = event_type in _RC_REVOKE_EVENTS
+
+    if grant:
+        await db.users.update_one(
+            {"user_id": app_user_id},
+            {
+                "$set": {
+                    "is_pro": True,
+                    "pro_since": now_utc(),
+                    "pro_product_id": product_id,
+                    "pro_source": "revenuecat",
+                    "updated_at": now_utc(),
+                }
+            },
+        )
+        logger.info("RevenueCat grant: user=%s product=%s event=%s", app_user_id, product_id, event_type)
+    elif revoke:
+        await db.users.update_one(
+            {"user_id": app_user_id},
+            {"$set": {"is_pro": False, "updated_at": now_utc()}},
+        )
+        logger.info("RevenueCat revoke: user=%s event=%s", app_user_id, event_type)
+    else:
+        # Informational events (TEST, BILLING_ISSUE, etc.) — ack but no DB change.
+        logger.info("RevenueCat info event: %s for %s", event_type, app_user_id)
+
+    return {"ok": True, "event": event_type}
+
+
+
+
 @api_router.post("/auth/demo-session", response_model=SessionOut)
 async def demo_session():
     """Create a demo user + session so testers and onboarding visitors can preview the app
