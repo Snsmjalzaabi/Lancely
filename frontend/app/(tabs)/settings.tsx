@@ -310,7 +310,7 @@ export default function SettingsScreen() {
           <Text style={styles.signOutText}>Sign out</Text>
         </TouchableOpacity>
 
-        <Text style={styles.footer}>Lancely — From Client to Payment. One Place.</Text>
+        <Text style={styles.footer}>Lancely — Manage. Create. Get Paid.</Text>
       </ScrollView>
 
       <ThemePickerSheet open={themeOpen} onClose={() => setThemeOpen(false)} />

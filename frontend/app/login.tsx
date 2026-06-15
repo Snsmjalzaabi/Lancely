@@ -18,7 +18,7 @@ import { useAuth } from "../lib/auth";
 import { radii, spacing, type, useTheme, type ColorPalette, THEME_LIST } from "../lib/theme";
 
 const LOGO_URL =
-  "https://customer-assets.emergentagent.com/job_solvio-mvp/artifacts/mid6xyfp_ChatGPT%20Image%20Jun%2015%2C%202026%2C%2011_05_07%20PM.png";
+  "https://customer-assets.emergentagent.com/job_solvio-mvp/artifacts/jwavdz5g_ChatGPT%20Image%20Jun%2016%2C%202026%2C%2001_05_51%20AM.png";
 
 export default function Login() {
   const { colors } = useTheme();
@@ -81,7 +81,7 @@ export default function Login() {
 
         <View style={styles.heroCopy}>
           <Text style={styles.hero} testID="login-hero">
-            From Client to Payment.{"\n"}One Place.
+            Your freelance OS,{"\n"}in your pocket.
           </Text>
           <Text style={styles.sub}>
             Manage clients, quotes, projects, invoices, and payments — all in one calm dashboard.
