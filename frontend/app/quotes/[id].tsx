@@ -1,0 +1,203 @@
+import { useCallback, useState } from "react";
+import {
+  ActivityIndicator,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
+
+import { PrimaryButton } from "../../components/PrimaryButton";
+import { ScreenHeader } from "../../components/Header";
+import { quoteTone, StatusBadge } from "../../components/StatusBadge";
+import { api } from "../../lib/api";
+import { fmtAED, fmtDate } from "../../lib/format";
+import { colors, radii, spacing, type } from "../../lib/theme";
+import type { Client, Quote } from "../../lib/types";
+
+export default function QuoteDetail() {
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const router = useRouter();
+  const [quote, setQuote] = useState<Quote | null>(null);
+  const [client, setClient] = useState<Client | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(false);
+
+  const load = useCallback(async () => {
+    if (!id) return;
+    const q = await api<Quote>(`/quotes/${id}`);
+    setQuote(q);
+    try {
+      const c = await api<Client>(`/clients/${q.client_id}`);
+      setClient(c);
+    } catch {
+      setClient(null);
+    }
+  }, [id]);
+
+  useFocusEffect(
+    useCallback(() => {
+      let active = true;
+      (async () => {
+        try {
+          await load();
+        } finally {
+          if (active) setLoading(false);
+        }
+      })();
+      return () => {
+        active = false;
+      };
+    }, [load]),
+  );
+
+  const setStatus = async (status: "accepted" | "rejected") => {
+    if (!quote) return;
+    setBusy(true);
+    try {
+      const updated = await api<Quote>(`/quotes/${quote.id}/status`, {
+        method: "PATCH",
+        query: { status },
+      });
+      setQuote(updated);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const onDelete = async () => {
+    if (!quote) return;
+    await api(`/quotes/${quote.id}`, { method: "DELETE" });
+    router.back();
+  };
+
+  if (loading || !quote) {
+    return (
+      <View style={styles.flex}>
+        <ScreenHeader title="Quote" showBack />
+        <ActivityIndicator color={colors.primary} style={{ marginTop: 40 }} />
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.flex}>
+      <ScreenHeader title={quote.quote_number} showBack />
+      <ScrollView contentContainerStyle={styles.body}>
+        <View style={styles.headCard}>
+          <Text style={styles.label}>QUOTE FOR</Text>
+          <Text style={styles.client}>{client?.name ?? "—"}</Text>
+          {client?.company ? <Text style={styles.sub}>{client.company}</Text> : null}
+          <View style={{ marginTop: 10 }}>
+            <StatusBadge label={quote.status} tone={quoteTone(quote.status)} />
+          </View>
+        </View>
+
+        <Text style={styles.section}>Items</Text>
+        {quote.items.map((it, idx) => (
+          <View key={idx} style={styles.itemRow}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.itemTitle}>{it.service}</Text>
+              {it.description ? <Text style={styles.itemDesc}>{it.description}</Text> : null}
+            </View>
+            <Text style={styles.itemPrice}>{fmtAED(it.price)}</Text>
+          </View>
+        ))}
+
+        <View style={styles.totalCard}>
+          <Text style={styles.label}>TOTAL</Text>
+          <Text style={styles.total}>{fmtAED(quote.amount)}</Text>
+          <Text style={styles.sub}>Sent {fmtDate(quote.created_at)}</Text>
+        </View>
+
+        {quote.notes ? (
+          <View style={styles.notesBox}>
+            <Text style={styles.label}>NOTES</Text>
+            <Text style={styles.notes}>{quote.notes}</Text>
+          </View>
+        ) : null}
+
+        {quote.status !== "accepted" && quote.status !== "rejected" ? (
+          <View style={{ gap: 10, marginTop: spacing.lg }}>
+            <PrimaryButton
+              label="Mark Accepted"
+              onPress={() => setStatus("accepted")}
+              loading={busy}
+              testID="quote-mark-accepted"
+              leftIcon={<Ionicons name="checkmark-circle-outline" size={16} color={colors.textInverse} />}
+            />
+            <PrimaryButton
+              label="Mark Rejected"
+              variant="secondary"
+              onPress={() => setStatus("rejected")}
+              loading={busy}
+              testID="quote-mark-rejected"
+            />
+          </View>
+        ) : null}
+
+        <TouchableOpacity style={styles.deleteBtn} onPress={onDelete} testID="quote-delete-button">
+          <Ionicons name="trash-outline" size={16} color={colors.errorText} />
+          <Text style={styles.deleteText}>Delete quote</Text>
+        </TouchableOpacity>
+      </ScrollView>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  flex: { flex: 1, backgroundColor: colors.bg },
+  body: { padding: spacing.md, paddingBottom: spacing.xxl },
+  headCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radii.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.md,
+  },
+  label: { ...type.label, color: colors.textSecondary, marginBottom: 2 },
+  client: { ...type.h2, color: colors.textPrimary },
+  sub: { color: colors.textSecondary, marginTop: 2 },
+  section: { ...type.h3, color: colors.textPrimary, marginTop: spacing.lg, marginBottom: 8 },
+  itemRow: {
+    flexDirection: "row",
+    backgroundColor: colors.surface,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: 12,
+    marginBottom: 8,
+    alignItems: "center",
+  },
+  itemTitle: { color: colors.textPrimary, fontWeight: "600" },
+  itemDesc: { color: colors.textSecondary, fontSize: 13, marginTop: 2 },
+  itemPrice: { color: colors.textPrimary, fontWeight: "700" },
+  totalCard: {
+    backgroundColor: colors.primary,
+    borderRadius: radii.lg,
+    padding: spacing.md,
+    marginTop: spacing.md,
+  },
+  total: { color: colors.textInverse, fontSize: 28, fontWeight: "700", marginTop: 4 },
+  notesBox: {
+    backgroundColor: colors.bgAlt,
+    padding: 12,
+    borderRadius: radii.md,
+    marginTop: spacing.md,
+  },
+  notes: { color: colors.textPrimary, marginTop: 4, fontSize: 14 },
+  deleteBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 14,
+    marginTop: spacing.lg,
+    borderRadius: radii.md,
+    backgroundColor: colors.errorBg,
+  },
+  deleteText: { color: colors.errorText, fontWeight: "600" },
+});

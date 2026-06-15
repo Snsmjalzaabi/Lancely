@@ -1,0 +1,45 @@
+{
+  "summary": "Backend-only smoke + functional regression for Solvio MVP. 17/17 pytest cases pass against http://localhost:8001/api. Verified: POST /api/auth/demo-session mints fresh user with seeded data (3 clients, 2 projects, 1 quote, 3 invoices); /api/auth/me returns the same user; 401 returned on all protected endpoints without a Bearer token and with a bogus token. Dashboard aggregates match expected values (active_clients=3, active_projects=2, pending=4250, overdue=1800, total_earned=4250, outstanding=6050). Clients full CRUD works with persistence verified via GET. Project status transitions through lead → proposal_sent → in_progress → review → completed. Quotes auto-number with Q-YYYYMM-NNN pattern, amount = sum(items.price), default status=sent, and PATCH /api/quotes/{id}/status accepts the QUERY param (and correctly 422s when sent in JSON body). Invoices auto-number INV-1004+ on a fresh tenant, partial payment moves status to 'partial', full payment moves to 'paid' with paid_date set, PATCH /api/invoices/{id}/status?status=paid marks paid_amount=amount, and creating an invoice with a past due_date is auto-marked overdue at list time. Notifications correctly surface invoice_overdue for the seeded past-due invoice. Tenant isolation verified: two demo sessions cannot read/update/delete each other's clients (404).",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "POST /api/quotes & POST /api/invoices", "issue": "Quote and invoice numbering use count_documents() to generate the next sequence (Q-YYYYMM-NNN and INV-1XXX). Not atomic under concurrency; two simultaneous inserts can produce duplicate numbers. Consider a per-tenant counters collection with $inc."},
+      {"endpoint": "seed_demo_data", "issue": "Seeded quote number is hard-coded to Q-{YYYYMM}-001. A subsequent POST /api/quotes for a fresh user will compute next from count and produce Q-{YYYYMM}-002, so no immediate collision, but the seeder bypasses the helper which is fragile if the format changes."},
+      {"endpoint": "GET /api/dashboard", "issue": "active_clients is implemented as total client count, not a true 'active' filter. Matches the PRD wording 'active clients=3' against the seed, but if a status field is added to clients later this will silently break."},
+      {"endpoint": "GET /api/dashboard", "issue": "revenue_this_month uses paid_date >= first-of-month, but the seeded paid invoice's paid_date is now-2d. Around month boundaries (e.g. running at month-start) this can drop seed revenue to 0. Not a bug per spec but worth a note for testers."},
+      {"endpoint": "POST /api/invoices", "issue": "_invoice_status() is also called at create-time, so an invoice created with a past due_date is already 'overdue' before any GET. The 'GET auto-marks overdue' code path is therefore mostly defensive — still functions correctly."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_solvio_backend.py",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "action_items": [
+    "(Optional) Replace count-based invoice/quote numbering with an atomic per-tenant counter to avoid race conditions under concurrent POSTs.",
+    "(Optional) Consider unifying seed_demo_data quote numbering with _next_quote_number() for consistency."
+  ],
+  "critical_code_review_comments": [
+    "server.py is a single 866-line file. Mostly fine for MVP scope, but starting to push the ~700 line guideline — split routers (auth, clients, projects, quotes, invoices, dashboard) when adding the next feature.",
+    "MongoDB _id is correctly excluded everywhere via {'_id': 0} projection. Good.",
+    "All protected endpoints rely on a manual `await get_current_user(authorization)` call rather than a FastAPI Depends. Works, but Depends would make tenant scoping less error-prone and remove the duplicated header arg on every handler.",
+    "PATCH /api/quotes/{id}/status and PATCH /api/invoices/{id}/status use QUERY params for status. This is intentional and documented but unusual for REST; future clients may try JSON bodies and get a 422.",
+    "CORS is allow_origins=['*'] with allow_credentials=True — browsers will reject credentialed requests with that combination. The current app uses Bearer tokens (not cookies) so it works, but worth tightening before adding any cookie-based auth.",
+    "All currency amounts are floats. For an invoicing product, Decimal/integer-cents is safer long term; rounding currently happens only in the dashboard aggregator."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_solvio_backend.py (new)",
+    "/app/test_reports/iteration_1.json (new)"
+  ],
+  "success_rate": {"backend": "100% (17/17)", "frontend": "n/a (backend-only run)"},
+  "seed_data_creation": "Each test that needed isolation called POST /api/auth/demo-session to mint a fresh demo tenant with the built-in seed (3 clients, 2 projects, 1 quote, 3 invoices). Any TEST_* records created (clients, projects, invoices) were either inside disposable demo tenants or explicitly deleted at the end of the test.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Use POST /api/auth/demo-session to mint Bearer tokens; never reuse demo users across tests because seed counts are exact. Quote/invoice status PATCHes take ?status= as a QUERY param, not a JSON body. Re-run with: pytest /app/backend/tests/test_solvio_backend.py -v",
+  "rca_of_issue": "No bugs found in scope; nothing to RCA."
+}
