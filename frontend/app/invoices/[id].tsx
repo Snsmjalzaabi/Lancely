@@ -14,6 +14,7 @@ import { Ionicons } from "@expo/vector-icons";
 
 import { PrimaryButton } from "../../components/PrimaryButton";
 import { ScreenHeader } from "../../components/Header";
+import { PdfPreviewModal } from "../../components/PdfPreviewModal";
 import { invoiceTone, StatusBadge } from "../../components/StatusBadge";
 import { api } from "../../lib/api";
 import { fmtDate, useFmtCurrency } from "../../lib/format";
@@ -35,6 +36,7 @@ export default function InvoiceDetail() {
   const [busy, setBusy] = useState(false);
   const [payAmount, setPayAmount] = useState("");
   const [exporting, setExporting] = useState(false);
+  const [pdfUri, setPdfUri] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -105,12 +107,13 @@ export default function InvoiceDetail() {
     if (!invoice) return;
     setExporting(true);
     try {
-      await exportInvoicePdf(invoice, client, {
+      const uri = await exportInvoicePdf(invoice, client, {
         logoUri: settings.logo_base64 ?? null,
         businessName: settings.business_name || null,
         currency: settings.currency || "AED",
         accentColor: settings.accent_color ?? undefined,
       });
+      setPdfUri(uri as string);
     } finally {
       setExporting(false);
     }
@@ -208,7 +211,14 @@ export default function InvoiceDetail() {
           <Ionicons name="trash-outline" size={16} color={colors.errorText} />
           <Text style={styles.deleteText}>Delete invoice</Text>
         </TouchableOpacity>
-      </ScrollView>    </View>
+      </ScrollView>
+      <PdfPreviewModal
+        open={!!pdfUri}
+        uri={pdfUri}
+        title={`Invoice ${invoice.invoice_number}`}
+        onClose={() => setPdfUri(null)}
+      />
+    </View>
   );
 }
 

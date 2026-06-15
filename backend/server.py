@@ -912,8 +912,11 @@ async def reports_summary(authorization: Optional[str] = Header(None)):
 
 
 @api_router.get("/reports/invoices.csv")
-async def reports_invoices_csv(authorization: Optional[str] = Header(None)):
-    """Download all invoices as a CSV (Pro-grade convenience)."""
+async def reports_invoices_csv(
+    cols: Optional[str] = None,
+    authorization: Optional[str] = Header(None),
+):
+    """Download invoices as CSV. ?cols=invoice_number,client,amount,... to pick & reorder columns."""
     import csv
     import io
     from fastapi.responses import Response
@@ -924,38 +927,193 @@ async def reports_invoices_csv(authorization: Optional[str] = Header(None)):
     clients = await db.clients.find({"user_id": uid}, {"_id": 0}).to_list(5000)
     client_map = {c["id"]: c for c in clients}
 
-    buf = io.StringIO()
-    writer = csv.writer(buf)
-    writer.writerow([
-        "Invoice #", "Client", "Company", "Amount", "Paid", "Outstanding", "Status",
-        "Due date", "Paid date", "Issued", "Notes",
-    ])
-    for inv in invoices:
+    def row_for(inv):
         c = client_map.get(inv["client_id"], {})
         paid = inv.get("paid_amount", 0)
         amount = inv.get("amount", 0)
-        outstanding = max(amount - paid, 0)
         due = ensure_aware(inv.get("due_date"))
         paid_d = ensure_aware(inv.get("paid_date"))
         created = ensure_aware(inv.get("created_at"))
-        writer.writerow([
-            inv.get("invoice_number", ""),
-            c.get("name", ""),
-            c.get("company", ""),
-            f"{amount:.2f}",
-            f"{paid:.2f}",
-            f"{outstanding:.2f}",
-            inv.get("status", ""),
-            due.strftime("%Y-%m-%d") if due else "",
-            paid_d.strftime("%Y-%m-%d") if paid_d else "",
-            created.strftime("%Y-%m-%d") if created else "",
-            (inv.get("notes") or "").replace("\n", " "),
-        ])
+        return {
+            "invoice_number": inv.get("invoice_number", ""),
+            "client": c.get("name", ""),
+            "company": c.get("company", ""),
+            "amount": f"{amount:.2f}",
+            "paid": f"{paid:.2f}",
+            "outstanding": f"{max(amount - paid, 0):.2f}",
+            "status": inv.get("status", ""),
+            "due_date": due.strftime("%Y-%m-%d") if due else "",
+            "paid_date": paid_d.strftime("%Y-%m-%d") if paid_d else "",
+            "issued": created.strftime("%Y-%m-%d") if created else "",
+            "notes": (inv.get("notes") or "").replace("\n", " "),
+        }
+
+    all_cols = [
+        ("invoice_number", "Invoice #"),
+        ("client", "Client"),
+        ("company", "Company"),
+        ("amount", "Amount"),
+        ("paid", "Paid"),
+        ("outstanding", "Outstanding"),
+        ("status", "Status"),
+        ("due_date", "Due date"),
+        ("paid_date", "Paid date"),
+        ("issued", "Issued"),
+        ("notes", "Notes"),
+    ]
+    return _csv_response(invoices, row_for, all_cols, cols, "solvio-invoices.csv")
+
+
+@api_router.get("/reports/clients.csv")
+async def reports_clients_csv(
+    cols: Optional[str] = None,
+    authorization: Optional[str] = Header(None),
+):
+    user = await get_current_user(authorization)
+    uid = user["user_id"]
+    clients = await db.clients.find({"user_id": uid}, {"_id": 0}).to_list(5000)
+    projects = await db.projects.find({"user_id": uid}, {"_id": 0}).to_list(5000)
+    invoices = await db.invoices.find({"user_id": uid}, {"_id": 0}).to_list(5000)
+    paid_by = {}
+    out_by = {}
+    proj_by = {}
+    for inv in invoices:
+        paid_by[inv["client_id"]] = paid_by.get(inv["client_id"], 0) + inv.get("paid_amount", 0)
+        out_by[inv["client_id"]] = out_by.get(inv["client_id"], 0) + max(inv["amount"] - inv.get("paid_amount", 0), 0)
+    for p in projects:
+        proj_by[p["client_id"]] = proj_by.get(p["client_id"], 0) + 1
+
+    def row_for(c):
+        created = ensure_aware(c.get("created_at"))
+        return {
+            "name": c.get("name", ""),
+            "company": c.get("company", ""),
+            "email": c.get("email", ""),
+            "phone": c.get("phone", ""),
+            "projects": str(proj_by.get(c["id"], 0)),
+            "total_paid": f"{paid_by.get(c['id'], 0):.2f}",
+            "outstanding": f"{out_by.get(c['id'], 0):.2f}",
+            "created": created.strftime("%Y-%m-%d") if created else "",
+            "notes": (c.get("notes") or "").replace("\n", " "),
+        }
+
+    all_cols = [
+        ("name", "Name"),
+        ("company", "Company"),
+        ("email", "Email"),
+        ("phone", "Phone"),
+        ("projects", "Projects"),
+        ("total_paid", "Total paid"),
+        ("outstanding", "Outstanding"),
+        ("created", "Created"),
+        ("notes", "Notes"),
+    ]
+    return _csv_response(clients, row_for, all_cols, cols, "solvio-clients.csv")
+
+
+@api_router.get("/reports/payments.csv")
+async def reports_payments_csv(
+    cols: Optional[str] = None,
+    authorization: Optional[str] = Header(None),
+):
+    user = await get_current_user(authorization)
+    uid = user["user_id"]
+    invoices = await db.invoices.find({"user_id": uid}, {"_id": 0}).to_list(5000)
+    clients = await db.clients.find({"user_id": uid}, {"_id": 0}).to_list(5000)
+    client_map = {c["id"]: c for c in clients}
+    # A "payment" row exists for every invoice where paid_amount > 0.
+    payments = [i for i in invoices if i.get("paid_amount", 0) > 0]
+
+    def row_for(inv):
+        c = client_map.get(inv["client_id"], {})
+        paid_d = ensure_aware(inv.get("paid_date"))
+        return {
+            "invoice_number": inv.get("invoice_number", ""),
+            "client": c.get("name", ""),
+            "company": c.get("company", ""),
+            "amount": f"{inv.get('paid_amount', 0):.2f}",
+            "total_invoice": f"{inv.get('amount', 0):.2f}",
+            "status": inv.get("status", ""),
+            "paid_date": paid_d.strftime("%Y-%m-%d") if paid_d else "",
+        }
+
+    all_cols = [
+        ("paid_date", "Paid date"),
+        ("invoice_number", "Invoice #"),
+        ("client", "Client"),
+        ("company", "Company"),
+        ("amount", "Amount paid"),
+        ("total_invoice", "Invoice total"),
+        ("status", "Status"),
+    ]
+    return _csv_response(payments, row_for, all_cols, cols, "solvio-payments.csv")
+
+
+def _csv_response(rows, row_for, all_cols, cols_query, filename):
+    import csv
+    import io
+    from fastapi.responses import Response
+
+    col_keys_all = [k for k, _ in all_cols]
+    label_map = dict(all_cols)
+    chosen = col_keys_all
+    if cols_query:
+        requested = [c.strip() for c in cols_query.split(",") if c.strip()]
+        valid = [c for c in requested if c in label_map]
+        if valid:
+            chosen = valid
+    buf = io.StringIO()
+    writer = csv.writer(buf)
+    writer.writerow([label_map[k] for k in chosen])
+    for r in rows:
+        d = row_for(r)
+        writer.writerow([d.get(k, "") for k in chosen])
     return Response(
         content=buf.getvalue(),
         media_type="text/csv",
-        headers={"Content-Disposition": "attachment; filename=solvio-invoices.csv"},
+        headers={"Content-Disposition": f"attachment; filename={filename}"},
     )
+
+
+@api_router.get("/reports/export-options")
+async def reports_export_options(authorization: Optional[str] = Header(None)):
+    """Returns the available columns for each CSV dataset so the UI can render a column picker."""
+    await get_current_user(authorization)
+    return {
+        "invoices": [
+            {"key": "invoice_number", "label": "Invoice #"},
+            {"key": "client", "label": "Client"},
+            {"key": "company", "label": "Company"},
+            {"key": "amount", "label": "Amount"},
+            {"key": "paid", "label": "Paid"},
+            {"key": "outstanding", "label": "Outstanding"},
+            {"key": "status", "label": "Status"},
+            {"key": "due_date", "label": "Due date"},
+            {"key": "paid_date", "label": "Paid date"},
+            {"key": "issued", "label": "Issued"},
+            {"key": "notes", "label": "Notes"},
+        ],
+        "clients": [
+            {"key": "name", "label": "Name"},
+            {"key": "company", "label": "Company"},
+            {"key": "email", "label": "Email"},
+            {"key": "phone", "label": "Phone"},
+            {"key": "projects", "label": "Projects"},
+            {"key": "total_paid", "label": "Total paid"},
+            {"key": "outstanding", "label": "Outstanding"},
+            {"key": "created", "label": "Created"},
+            {"key": "notes", "label": "Notes"},
+        ],
+        "payments": [
+            {"key": "paid_date", "label": "Paid date"},
+            {"key": "invoice_number", "label": "Invoice #"},
+            {"key": "client", "label": "Client"},
+            {"key": "company", "label": "Company"},
+            {"key": "amount", "label": "Amount paid"},
+            {"key": "total_invoice", "label": "Invoice total"},
+            {"key": "status", "label": "Status"},
+        ],
+    }
 
 
 @api_router.get("/notifications")

@@ -13,6 +13,7 @@ import { Ionicons } from "@expo/vector-icons";
 
 import { PrimaryButton } from "../../components/PrimaryButton";
 import { ScreenHeader } from "../../components/Header";
+import { PdfPreviewModal } from "../../components/PdfPreviewModal";
 import { quoteTone, StatusBadge } from "../../components/StatusBadge";
 import { api } from "../../lib/api";
 import { fmtDate, useFmtCurrency } from "../../lib/format";
@@ -32,6 +33,7 @@ export default function QuoteDetail() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [pdfUri, setPdfUri] = useState<string | null>(null);
   const { settings } = useSettings();
 
   const load = useCallback(async () => {
@@ -86,12 +88,13 @@ export default function QuoteDetail() {
     if (!quote) return;
     setExporting(true);
     try {
-      await exportQuotePdf(quote, client, {
+      const uri = await exportQuotePdf(quote, client, {
         logoUri: settings.logo_base64 ?? null,
         businessName: settings.business_name || null,
         currency: settings.currency || "AED",
         accentColor: settings.accent_color ?? undefined,
       });
+      setPdfUri(uri as string);
     } finally {
       setExporting(false);
     }
@@ -181,6 +184,12 @@ export default function QuoteDetail() {
           <Text style={styles.deleteText}>Delete quote</Text>
         </TouchableOpacity>
       </ScrollView>
+      <PdfPreviewModal
+        open={!!pdfUri}
+        uri={pdfUri}
+        title={`Quote ${quote.quote_number}`}
+        onClose={() => setPdfUri(null)}
+      />
     </View>
   );
 }

@@ -95,23 +95,30 @@ function buildHtml(args: BuildArgs): string {
 }
 
 async function generateAndShare(html: string, fileNameHint: string) {
-  const { uri } = await Print.printToFileAsync({ html, base64: false });
+  return generatePdfFromHtml(html, fileNameHint);
+}
+
+export async function generatePdfFromHtml(html: string, _fileNameHint: string): Promise<string> {
   if (Platform.OS === "web") {
-    // On web, open in a new tab.
+    // expo-print on web doesn't produce a file URI; render the HTML in a Blob URL instead.
+    if (typeof window === "undefined") return "";
+    const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+    return URL.createObjectURL(blob);
+  }
+  const result = await Print.printToFileAsync({ html, base64: false });
+  return result?.uri ?? "";
+}
+
+export async function sharePdfUri(uri: string, dialogTitle: string) {
+  if (Platform.OS === "web") {
     if (typeof window !== "undefined") {
       window.open(uri, "_blank");
     }
-    return uri;
+    return;
   }
-  const canShare = await Sharing.isAvailableAsync();
-  if (canShare) {
-    await Sharing.shareAsync(uri, {
-      mimeType: "application/pdf",
-      dialogTitle: fileNameHint,
-      UTI: "com.adobe.pdf",
-    });
+  if (await Sharing.isAvailableAsync()) {
+    await Sharing.shareAsync(uri, { mimeType: "application/pdf", dialogTitle, UTI: "com.adobe.pdf" });
   }
-  return uri;
 }
 
 export async function exportQuotePdf(
