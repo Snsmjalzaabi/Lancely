@@ -16,11 +16,12 @@ import { PrimaryButton } from "../../components/PrimaryButton";
 import { ScreenHeader } from "../../components/Header";
 import { ClientPicker } from "../../components/ClientPicker";
 import { api } from "../../lib/api";
-import { fmtAED } from "../../lib/format";
+import { useFmtCurrency } from "../../lib/format";
 import { radii, spacing, type, useTheme, type ColorPalette } from "../../lib/theme";
 import type { Client, QuoteItem } from "../../lib/types";
 
 export default function NewQuote() {
+  const fmtCurrency = useFmtCurrency();
   const { colors } = useTheme();
   const styles = makeStyles(colors);
   const router = useRouter();
@@ -134,7 +135,7 @@ export default function NewQuote() {
 
           <View style={styles.totalRow} testID="quote-form-total">
             <Text style={styles.totalLabel}>TOTAL</Text>
-            <Text style={styles.totalValue}>{fmtAED(total)}</Text>
+            <Text style={styles.totalValue}>{fmtCurrency(total)}</Text>
           </View>
 
           <PrimaryButton

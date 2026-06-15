@@ -16,7 +16,7 @@ import { EmptyState } from "../../components/EmptyState";
 import { ScreenHeader } from "../../components/Header";
 import { invoiceTone, StatusBadge } from "../../components/StatusBadge";
 import { api } from "../../lib/api";
-import { fmtAED, fmtDate } from "../../lib/format";
+import { fmtDate, useFmtCurrency } from "../../lib/format";
 import { radii, spacing, type, useTheme, type ColorPalette } from "../../lib/theme";
 import type { Client, Invoice, InvoiceStatus } from "../../lib/types";
 
@@ -30,6 +30,7 @@ const FILTERS: { key: FilterKey; label: string }[] = [
 ];
 
 export default function InvoicesScreen() {
+  const fmtCurrency = useFmtCurrency();
   const { colors } = useTheme();
   const styles = makeStyles(colors);
   const router = useRouter();
@@ -92,9 +93,9 @@ export default function InvoicesScreen() {
 
       <View style={styles.stickyHead}>
         <View style={styles.metrics}>
-          <Metric label="Earned" value={fmtAED(totals.earned)} tone="success" testID="invoices-metric-earned" />
-          <Metric label="Outstanding" value={fmtAED(totals.outstanding)} tone="warning" testID="invoices-metric-outstanding" />
-          <Metric label="Overdue" value={fmtAED(totals.overdue)} tone="error" testID="invoices-metric-overdue" />
+          <Metric label="Earned" value={fmtCurrency(totals.earned)} tone="success" testID="invoices-metric-earned" />
+          <Metric label="Outstanding" value={fmtCurrency(totals.outstanding)} tone="warning" testID="invoices-metric-outstanding" />
+          <Metric label="Overdue" value={fmtCurrency(totals.overdue)} tone="error" testID="invoices-metric-overdue" />
         </View>
         <ScrollView
           horizontal
@@ -147,7 +148,7 @@ export default function InvoicesScreen() {
                 </Text>
               </View>
               <View style={{ alignItems: "flex-end", gap: 6 }}>
-                <Text style={styles.amount}>{fmtAED(item.amount)}</Text>
+                <Text style={styles.amount}>{fmtCurrency(item.amount)}</Text>
                 <StatusBadge label={item.status} tone={invoiceTone(item.status)} />
               </View>
             </TouchableOpacity>

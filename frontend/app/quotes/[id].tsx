@@ -1,6 +1,7 @@
 import { useCallback, useState } from "react";
 import {
   ActivityIndicator,
+  Image,
   ScrollView,
   StyleSheet,
   Text,
@@ -14,11 +15,13 @@ import { PrimaryButton } from "../../components/PrimaryButton";
 import { ScreenHeader } from "../../components/Header";
 import { quoteTone, StatusBadge } from "../../components/StatusBadge";
 import { api } from "../../lib/api";
-import { fmtAED, fmtDate } from "../../lib/format";
+import { fmtDate, useFmtCurrency } from "../../lib/format";
+import { useSettings } from "../../lib/settings";
 import { radii, spacing, type, useTheme, type ColorPalette } from "../../lib/theme";
 import type { Client, Quote } from "../../lib/types";
 
 export default function QuoteDetail() {
+  const fmtCurrency = useFmtCurrency();
   const { colors } = useTheme();
   const styles = makeStyles(colors);
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -89,6 +92,11 @@ export default function QuoteDetail() {
     <View style={styles.flex}>
       <ScreenHeader title={quote.quote_number} showBack />
       <ScrollView contentContainerStyle={styles.body}>
+        {settings.logo_base64 ? (
+          <View style={styles.logoWrap} testID="quote-detail-logo">
+            <Image source={{ uri: settings.logo_base64 }} style={styles.logo} resizeMode="contain" />
+          </View>
+        ) : null}
         <View style={styles.headCard}>
           <Text style={styles.label}>QUOTE FOR</Text>
           <Text style={styles.client}>{client?.name ?? "—"}</Text>
@@ -105,13 +113,13 @@ export default function QuoteDetail() {
               <Text style={styles.itemTitle}>{it.service}</Text>
               {it.description ? <Text style={styles.itemDesc}>{it.description}</Text> : null}
             </View>
-            <Text style={styles.itemPrice}>{fmtAED(it.price)}</Text>
+            <Text style={styles.itemPrice}>{fmtCurrency(it.price)}</Text>
           </View>
         ))}
 
         <View style={styles.totalCard}>
           <Text style={styles.label}>TOTAL</Text>
-          <Text style={styles.total}>{fmtAED(quote.amount)}</Text>
+          <Text style={styles.total}>{fmtCurrency(quote.amount)}</Text>
           <Text style={styles.sub}>Sent {fmtDate(quote.created_at)}</Text>
         </View>
 
@@ -153,6 +161,19 @@ export default function QuoteDetail() {
 const makeStyles = (colors: ColorPalette) => StyleSheet.create({
   flex: { flex: 1, backgroundColor: colors.bg },
   body: { padding: spacing.md, paddingBottom: spacing.xxl },
+  logoWrap: {
+    alignSelf: "center",
+    width: 80,
+    height: 80,
+    borderRadius: radii.md,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: 6,
+    marginBottom: spacing.md,
+    overflow: "hidden",
+  },
+  logo: { width: "100%", height: "100%" },
   headCard: {
     backgroundColor: colors.surface,
     borderRadius: radii.lg,

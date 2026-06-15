@@ -15,12 +15,13 @@ import { ScreenHeader } from "../../components/Header";
 import { ThemePickerTrigger } from "../../components/ThemePicker";
 import { api } from "../../lib/api";
 import { useAuth } from "../../lib/auth";
-import { fmtAED } from "../../lib/format";
+import { useFmtCurrency } from "../../lib/format";
 import { radii, shadow, spacing, type, useTheme, type ColorPalette } from "../../lib/theme";
 import type { DashboardStats, Invoice, Notification } from "../../lib/types";
 import { invoiceTone, StatusBadge } from "../../components/StatusBadge";
 
 export default function Dashboard() {
+  const fmtCurrency = useFmtCurrency();
   const { colors } = useTheme();
   const styles = makeStyles(colors);
   const { user, signOut } = useAuth();
@@ -93,15 +94,15 @@ export default function Dashboard() {
           <>
             <View style={styles.heroCard} testID="dashboard-revenue-card">
               <Text style={styles.heroLabel}>Revenue this month</Text>
-              <Text style={styles.heroValue}>{fmtAED(stats?.revenue_this_month ?? 0)}</Text>
+              <Text style={styles.heroValue}>{fmtCurrency(stats?.revenue_this_month ?? 0)}</Text>
               <View style={styles.heroFooter}>
                 <View>
                   <Text style={styles.heroSubLabel}>Total earned</Text>
-                  <Text style={styles.heroSubValue}>{fmtAED(stats?.total_earned ?? 0)}</Text>
+                  <Text style={styles.heroSubValue}>{fmtCurrency(stats?.total_earned ?? 0)}</Text>
                 </View>
                 <View>
                   <Text style={styles.heroSubLabel}>Outstanding</Text>
-                  <Text style={styles.heroSubValue}>{fmtAED(stats?.outstanding_balance ?? 0)}</Text>
+                  <Text style={styles.heroSubValue}>{fmtCurrency(stats?.outstanding_balance ?? 0)}</Text>
                 </View>
               </View>
             </View>
@@ -126,7 +127,7 @@ export default function Dashboard() {
               <KpiTile
                 icon="time-outline"
                 label="Pending"
-                value={fmtAED(stats?.pending_invoices_amount ?? 0)}
+                value={fmtCurrency(stats?.pending_invoices_amount ?? 0)}
                 tint={colors.warningBg}
                 onPress={() => router.push("/(tabs)/invoices")}
                 testID="kpi-pending-invoices"
@@ -134,7 +135,7 @@ export default function Dashboard() {
               <KpiTile
                 icon="alert-circle-outline"
                 label="Overdue"
-                value={fmtAED(stats?.overdue_invoices_amount ?? 0)}
+                value={fmtCurrency(stats?.overdue_invoices_amount ?? 0)}
                 tint={colors.errorBg}
                 onPress={() => router.push("/(tabs)/invoices")}
                 testID="kpi-overdue-invoices"
@@ -163,7 +164,7 @@ export default function Dashboard() {
                     <Text style={styles.rowSubtitle}>Due {new Date(inv.due_date).toLocaleDateString()}</Text>
                   </View>
                   <View style={{ alignItems: "flex-end", gap: 6 }}>
-                    <Text style={styles.rowAmount}>{fmtAED(inv.amount - inv.paid_amount)}</Text>
+                    <Text style={styles.rowAmount}>{fmtCurrency(inv.amount - inv.paid_amount)}</Text>
                     <StatusBadge label={inv.status} tone={invoiceTone(inv.status)} />
                   </View>
                 </TouchableOpacity>

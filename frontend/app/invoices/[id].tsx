@@ -1,6 +1,7 @@
 import { useCallback, useState } from "react";
 import {
   ActivityIndicator,
+  Image,
   ScrollView,
   StyleSheet,
   Text,
@@ -15,13 +16,16 @@ import { PrimaryButton } from "../../components/PrimaryButton";
 import { ScreenHeader } from "../../components/Header";
 import { invoiceTone, StatusBadge } from "../../components/StatusBadge";
 import { api } from "../../lib/api";
-import { fmtAED, fmtDate } from "../../lib/format";
+import { fmtDate, useFmtCurrency } from "../../lib/format";
+import { useSettings } from "../../lib/settings";
 import { radii, spacing, type, useTheme, type ColorPalette } from "../../lib/theme";
 import type { Client, Invoice } from "../../lib/types";
 
 export default function InvoiceDetail() {
+  const fmtCurrency = useFmtCurrency();
   const { colors } = useTheme();
   const styles = makeStyles(colors);
+  const { settings } = useSettings();
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const [invoice, setInvoice] = useState<Invoice | null>(null);
@@ -110,20 +114,25 @@ export default function InvoiceDetail() {
     <View style={styles.flex}>
       <ScreenHeader title={invoice.invoice_number} showBack />
       <ScrollView contentContainerStyle={styles.body}>
+        {settings.logo_base64 ? (
+          <View style={styles.logoWrap} testID="invoice-detail-logo">
+            <Image source={{ uri: settings.logo_base64 }} style={styles.logo} resizeMode="contain" />
+          </View>
+        ) : null}
         <View style={styles.heroCard}>
           <Text style={styles.heroLabel}>AMOUNT DUE</Text>
-          <Text style={styles.heroValue}>{fmtAED(remaining)}</Text>
+          <Text style={styles.heroValue}>{fmtCurrency(remaining)}</Text>
           <View style={{ marginTop: 8 }}>
             <StatusBadge label={invoice.status} tone={invoiceTone(invoice.status)} />
           </View>
           <View style={styles.heroGrid}>
             <View style={styles.heroCell}>
               <Text style={styles.heroCellLabel}>Total</Text>
-              <Text style={styles.heroCellValue}>{fmtAED(invoice.amount)}</Text>
+              <Text style={styles.heroCellValue}>{fmtCurrency(invoice.amount)}</Text>
             </View>
             <View style={styles.heroCell}>
               <Text style={styles.heroCellLabel}>Paid</Text>
-              <Text style={styles.heroCellValue}>{fmtAED(invoice.paid_amount)}</Text>
+              <Text style={styles.heroCellValue}>{fmtCurrency(invoice.paid_amount)}</Text>
             </View>
           </View>
         </View>
@@ -144,7 +153,7 @@ export default function InvoiceDetail() {
                 style={styles.payInput}
                 value={payAmount}
                 onChangeText={(v) => setPayAmount(v.replace(/[^0-9.]/g, ""))}
-                placeholder={`Up to ${fmtAED(remaining)}`}
+                placeholder={`Up to ${fmtCurrency(remaining)}`}
                 placeholderTextColor={colors.textMuted}
                 keyboardType="numeric"
                 testID="invoice-payment-input"
@@ -192,6 +201,19 @@ function MetaRow({ label, value }: { label: string; value: string }) {
 const makeStyles = (colors: ColorPalette) => StyleSheet.create({
   flex: { flex: 1, backgroundColor: colors.bg },
   body: { padding: spacing.md, paddingBottom: spacing.xxl },
+  logoWrap: {
+    alignSelf: "center",
+    width: 80,
+    height: 80,
+    borderRadius: radii.md,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: 6,
+    marginBottom: spacing.md,
+    overflow: "hidden",
+  },
+  logo: { width: "100%", height: "100%" },
   heroCard: {
     backgroundColor: colors.primary,
     borderRadius: radii.lg,

@@ -13,12 +13,13 @@ import { Ionicons } from "@expo/vector-icons";
 
 import { ScreenHeader } from "../../components/Header";
 import { api } from "../../lib/api";
-import { fmtAED, fmtDateShort } from "../../lib/format";
+import { fmtDateShort, useFmtCurrency } from "../../lib/format";
 import { radii, spacing, type, useTheme, type ColorPalette } from "../../lib/theme";
 import type { Client, Project, ProjectStatus } from "../../lib/types";
 import { PROJECT_STATUSES } from "../../lib/types";
 
 export default function ProjectsScreen() {
+  const fmtCurrency = useFmtCurrency();
   const { colors } = useTheme();
   const styles = makeStyles(colors);
   const router = useRouter();
@@ -122,7 +123,7 @@ export default function ProjectsScreen() {
                           {clients[p.client_id]?.name ?? "—"}
                         </Text>
                         <View style={styles.cardFooter}>
-                          <Text style={styles.cardAmount}>{fmtAED(p.value)}</Text>
+                          <Text style={styles.cardAmount}>{fmtCurrency(p.value)}</Text>
                           {p.due_date ? (
                             <View style={styles.dueBadge}>
                               <Ionicons name="calendar-outline" size={11} color={colors.textSecondary} />

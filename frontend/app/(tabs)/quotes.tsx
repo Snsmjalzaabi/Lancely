@@ -15,11 +15,12 @@ import { EmptyState } from "../../components/EmptyState";
 import { ScreenHeader } from "../../components/Header";
 import { quoteTone, StatusBadge } from "../../components/StatusBadge";
 import { api } from "../../lib/api";
-import { fmtAED, fmtDate } from "../../lib/format";
+import { fmtDate, useFmtCurrency } from "../../lib/format";
 import { radii, spacing, type, useTheme, type ColorPalette } from "../../lib/theme";
 import type { Client, Quote } from "../../lib/types";
 
 export default function QuotesScreen() {
+  const fmtCurrency = useFmtCurrency();
   const { colors } = useTheme();
   const styles = makeStyles(colors);
   const router = useRouter();
@@ -94,7 +95,7 @@ export default function QuotesScreen() {
                 </Text>
               </View>
               <View style={{ alignItems: "flex-end", gap: 6 }}>
-                <Text style={styles.amount}>{fmtAED(item.amount)}</Text>
+                <Text style={styles.amount}>{fmtCurrency(item.amount)}</Text>
                 <StatusBadge label={item.status} tone={quoteTone(item.status)} />
               </View>
             </TouchableOpacity>

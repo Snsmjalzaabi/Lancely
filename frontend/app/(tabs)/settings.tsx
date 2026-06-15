@@ -13,6 +13,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
+import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { ScreenHeader } from "../../components/Header";
@@ -33,6 +34,9 @@ export default function SettingsScreen() {
   const styles = makeStyles(colors);
   const { user, signOut } = useAuth();
   const { settings, options, update, loading } = useSettings();
+  const router = useRouter();
+  const isPro = !!user?.is_pro;
+  const goPro = () => router.push("/pro");
 
   const [themeOpen, setThemeOpen] = useState(false);
   const [currencyOpen, setCurrencyOpen] = useState(false);
@@ -76,6 +80,7 @@ export default function SettingsScreen() {
   };
 
   const removeLogo = async () => {
+    if (!isPro) return goPro();
     setError(null);
     try {
       await update({ logo_base64: null });
@@ -86,6 +91,7 @@ export default function SettingsScreen() {
   };
 
   const setAccent = async (hex: string | null) => {
+    if (!isPro) return goPro();
     setError(null);
     try {
       await update({ accent_color: hex });
@@ -154,6 +160,24 @@ export default function SettingsScreen() {
             <Text style={[styles.proText, { color: colors.primary }]}>PRO</Text>
           </View>
         </View>
+
+        {isPro ? null : (
+          <TouchableOpacity
+            style={styles.upgradeBanner}
+            onPress={goPro}
+            testID="settings-upgrade-banner"
+            activeOpacity={0.85}
+          >
+            <Ionicons name="rocket-outline" size={18} color={colors.textInverse} />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.upgradeBannerTitle}>Unlock Solvio Pro</Text>
+              <Text style={styles.upgradeBannerSub}>
+                Custom logo, accent color, advanced reports — AED 29/mo
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={colors.textInverse} />
+          </TouchableOpacity>
+        )}
 
         <View style={styles.brandCard} testID="settings-brand-card">
           <View style={styles.brandRow}>
@@ -421,6 +445,17 @@ const makeStyles = (colors: ColorPalette) =>
       marginBottom: spacing.sm,
     },
     proText: { fontSize: 10, fontWeight: "800", letterSpacing: 0.4 },
+    upgradeBanner: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 10,
+      backgroundColor: colors.primary,
+      borderRadius: radii.lg,
+      padding: spacing.md,
+      marginBottom: spacing.sm,
+    },
+    upgradeBannerTitle: { color: colors.textInverse, fontWeight: "700", fontSize: 14 },
+    upgradeBannerSub: { color: colors.onPrimaryMuted, fontSize: 12, marginTop: 2 },
     row: {
       flexDirection: "row",
       alignItems: "center",

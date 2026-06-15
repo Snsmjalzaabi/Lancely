@@ -3,6 +3,7 @@ export type User = {
   email: string;
   name: string;
   picture?: string | null;
+  is_pro?: boolean;
 };
 
 export type Client = {

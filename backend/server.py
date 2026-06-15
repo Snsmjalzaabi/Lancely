@@ -73,6 +73,7 @@ class UserOut(BaseModel):
     email: str
     name: str
     picture: Optional[str] = None
+    is_pro: bool = False
 
 
 class SessionOut(BaseModel):
@@ -237,7 +238,7 @@ async def exchange_session(payload: SessionExchangeIn):
     )
 
     return SessionOut(
-        user=UserOut(user_id=user_id, email=email, name=name, picture=picture),
+        user=UserOut(user_id=user_id, email=email, name=name, picture=picture, is_pro=bool(existing.get("is_pro", False)) if existing else False),
         session_token=session_token,
         expires_at=expires_at,
     )
@@ -251,6 +252,41 @@ async def me(user: dict = None, authorization: Optional[str] = Header(None)):
         email=user["email"],
         name=user["name"],
         picture=user.get("picture"),
+        is_pro=bool(user.get("is_pro", False)),
+    )
+
+
+@api_router.post("/me/upgrade", response_model=UserOut)
+async def upgrade_to_pro(authorization: Optional[str] = Header(None)):
+    """Mock upgrade endpoint — flips is_pro=true without real payment.
+    Replace with Stripe/Razorpay when ready."""
+    user = await get_current_user(authorization)
+    await db.users.update_one(
+        {"user_id": user["user_id"]},
+        {"$set": {"is_pro": True, "pro_since": now_utc(), "updated_at": now_utc()}},
+    )
+    return UserOut(
+        user_id=user["user_id"],
+        email=user["email"],
+        name=user["name"],
+        picture=user.get("picture"),
+        is_pro=True,
+    )
+
+
+@api_router.post("/me/downgrade", response_model=UserOut)
+async def downgrade_from_pro(authorization: Optional[str] = Header(None)):
+    user = await get_current_user(authorization)
+    await db.users.update_one(
+        {"user_id": user["user_id"]},
+        {"$set": {"is_pro": False, "updated_at": now_utc()}},
+    )
+    return UserOut(
+        user_id=user["user_id"],
+        email=user["email"],
+        name=user["name"],
+        picture=user.get("picture"),
+        is_pro=False,
     )
 
 

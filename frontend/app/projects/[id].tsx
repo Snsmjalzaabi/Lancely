@@ -13,12 +13,13 @@ import { Ionicons } from "@expo/vector-icons";
 import { ScreenHeader } from "../../components/Header";
 import { projectTone, StatusBadge } from "../../components/StatusBadge";
 import { api } from "../../lib/api";
-import { fmtAED, fmtDate } from "../../lib/format";
+import { fmtDate, useFmtCurrency } from "../../lib/format";
 import { radii, spacing, type, useTheme, type ColorPalette } from "../../lib/theme";
 import type { Client, Project, ProjectStatus } from "../../lib/types";
 import { PROJECT_STATUSES } from "../../lib/types";
 
 export default function ProjectDetail() {
+  const fmtCurrency = useFmtCurrency();
   const { colors } = useTheme();
   const styles = makeStyles(colors);
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -87,7 +88,7 @@ export default function ProjectDetail() {
           <View style={styles.grid}>
             <View style={styles.cell}>
               <Text style={styles.cellLabel}>VALUE</Text>
-              <Text style={styles.cellValue}>{fmtAED(project.value)}</Text>
+              <Text style={styles.cellValue}>{fmtCurrency(project.value)}</Text>
             </View>
             <View style={styles.cell}>
               <Text style={styles.cellLabel}>DUE</Text>

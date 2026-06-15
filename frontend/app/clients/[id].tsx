@@ -14,11 +14,12 @@ import { Ionicons } from "@expo/vector-icons";
 import { ScreenHeader } from "../../components/Header";
 import { invoiceTone, projectTone, quoteTone, StatusBadge } from "../../components/StatusBadge";
 import { api } from "../../lib/api";
-import { fmtAED, fmtDate } from "../../lib/format";
+import { fmtDate, useFmtCurrency } from "../../lib/format";
 import { radii, spacing, type, useTheme, type ColorPalette } from "../../lib/theme";
 import type { Client, Invoice, Project, Quote } from "../../lib/types";
 
 export default function ClientProfile() {
+  const fmtCurrency = useFmtCurrency();
   const { colors } = useTheme();
   const styles = makeStyles(colors);
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -110,11 +111,11 @@ export default function ClientProfile() {
         <View style={styles.statsRow}>
           <View style={[styles.statTile, { backgroundColor: colors.successBg }]}>
             <Text style={[styles.statLabel, { color: colors.successText }]}>PAID</Text>
-            <Text style={[styles.statValue, { color: colors.successText }]}>{fmtAED(totalPaid)}</Text>
+            <Text style={[styles.statValue, { color: colors.successText }]}>{fmtCurrency(totalPaid)}</Text>
           </View>
           <View style={[styles.statTile, { backgroundColor: colors.warningBg }]}>
             <Text style={[styles.statLabel, { color: colors.warningText }]}>OUTSTANDING</Text>
-            <Text style={[styles.statValue, { color: colors.warningText }]}>{fmtAED(outstanding)}</Text>
+            <Text style={[styles.statValue, { color: colors.warningText }]}>{fmtCurrency(outstanding)}</Text>
           </View>
         </View>
 
@@ -124,7 +125,7 @@ export default function ClientProfile() {
           items={projects.map((p) => ({
             id: p.id,
             title: p.name,
-            subtitle: `Value ${fmtAED(p.value)}`,
+            subtitle: `Value ${fmtCurrency(p.value)}`,
             badge: { label: p.status, tone: projectTone(p.status) as never },
             onPress: () => router.push(`/projects/${p.id}`),
           }))}
@@ -137,7 +138,7 @@ export default function ClientProfile() {
             title: q.quote_number,
             subtitle: q.title,
             badge: { label: q.status, tone: quoteTone(q.status) as never },
-            amount: fmtAED(q.amount),
+            amount: fmtCurrency(q.amount),
             onPress: () => router.push(`/quotes/${q.id}`),
           }))}
         />
@@ -149,7 +150,7 @@ export default function ClientProfile() {
             title: i.invoice_number,
             subtitle: `Due ${fmtDate(i.due_date)}`,
             badge: { label: i.status, tone: invoiceTone(i.status) as never },
-            amount: fmtAED(i.amount),
+            amount: fmtCurrency(i.amount),
             onPress: () => router.push(`/invoices/${i.id}`),
           }))}
         />
