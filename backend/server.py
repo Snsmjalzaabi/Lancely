@@ -1,4 +1,5 @@
 from fastapi import FastAPI, APIRouter, HTTPException, Header, Request
+from fastapi.responses import FileResponse
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -335,6 +336,23 @@ async def logout(authorization: Optional[str] = Header(None)):
         token = authorization.split(" ", 1)[1].strip()
         await db.user_sessions.delete_one({"session_token": token})
     return {"ok": True}
+
+
+# ------------------------- One-off Asset Downloads -------------------------
+
+@api_router.get("/downloads/screenshots.zip")
+async def download_screenshots():
+    """Serve the App Store screenshots zip for one-click download."""
+    p = Path("/app/screenshots/lancely_appstore_screenshots.zip")
+    if not p.exists():
+        raise HTTPException(status_code=404, detail="Screenshots archive not found")
+    return FileResponse(
+        path=str(p),
+        media_type="application/zip",
+        filename="lancely_appstore_screenshots.zip",
+    )
+
+
 
 
 # ------------------------- Demo Seeder -------------------------
