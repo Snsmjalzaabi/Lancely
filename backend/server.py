@@ -159,6 +159,8 @@ class UserSettings(BaseModel):
     accent_color: Optional[str] = None  # hex like "#A855F7"; None = follow theme
     logo_base64: Optional[str] = None  # data URI or raw base64
     business_name: Optional[str] = ""  # shown on PDFs alongside the logo
+    # Persisted column choices per CSV dataset, e.g. {"invoices": ["invoice_number","amount",...]}
+    report_columns: Optional[dict] = None
 
 
 class InvoiceIn(BaseModel):
@@ -914,18 +916,19 @@ async def reports_summary(authorization: Optional[str] = Header(None)):
 @api_router.get("/reports/invoices.csv")
 async def reports_invoices_csv(
     cols: Optional[str] = None,
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
+    status: Optional[str] = None,
     authorization: Optional[str] = Header(None),
 ):
     """Download invoices as CSV. ?cols=invoice_number,client,amount,... to pick & reorder columns."""
-    import csv
-    import io
-    from fastapi.responses import Response
-
     user = await get_current_user(authorization)
     uid = user["user_id"]
     invoices = await db.invoices.find({"user_id": uid}, {"_id": 0}).to_list(5000)
     clients = await db.clients.find({"user_id": uid}, {"_id": 0}).to_list(5000)
     client_map = {c["id"]: c for c in clients}
+    invoices = _filter_by_status(invoices, status)
+    invoices = _filter_by_date(invoices, "due_date", date_from, date_to)
 
     def row_for(inv):
         c = client_map.get(inv["client_id"], {})
@@ -967,11 +970,14 @@ async def reports_invoices_csv(
 @api_router.get("/reports/clients.csv")
 async def reports_clients_csv(
     cols: Optional[str] = None,
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
     authorization: Optional[str] = Header(None),
 ):
     user = await get_current_user(authorization)
     uid = user["user_id"]
     clients = await db.clients.find({"user_id": uid}, {"_id": 0}).to_list(5000)
+    clients = _filter_by_date(clients, "created_at", date_from, date_to)
     projects = await db.projects.find({"user_id": uid}, {"_id": 0}).to_list(5000)
     invoices = await db.invoices.find({"user_id": uid}, {"_id": 0}).to_list(5000)
     paid_by = {}
@@ -1014,6 +1020,8 @@ async def reports_clients_csv(
 @api_router.get("/reports/payments.csv")
 async def reports_payments_csv(
     cols: Optional[str] = None,
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
     authorization: Optional[str] = Header(None),
 ):
     user = await get_current_user(authorization)
@@ -1023,6 +1031,7 @@ async def reports_payments_csv(
     client_map = {c["id"]: c for c in clients}
     # A "payment" row exists for every invoice where paid_amount > 0.
     payments = [i for i in invoices if i.get("paid_amount", 0) > 0]
+    payments = _filter_by_date(payments, "paid_date", date_from, date_to)
 
     def row_for(inv):
         c = client_map.get(inv["client_id"], {})
@@ -1073,6 +1082,37 @@ def _csv_response(rows, row_for, all_cols, cols_query, filename):
         media_type="text/csv",
         headers={"Content-Disposition": f"attachment; filename={filename}"},
     )
+
+
+def _filter_by_status(rows, status):
+    if not status:
+        return rows
+    wanted = {s.strip() for s in status.split(",") if s.strip()}
+    return [r for r in rows if r.get("status") in wanted]
+
+
+def _filter_by_date(rows, field, date_from, date_to):
+    if not (date_from or date_to):
+        return rows
+    from datetime import datetime as _dt
+    def parse(s):
+        if not s:
+            return None
+        try:
+            return _dt.fromisoformat(s).replace(tzinfo=timezone.utc)
+        except Exception:
+            return None
+    a = parse(date_from)
+    b = parse(date_to)
+    out = []
+    for r in rows:
+        v = ensure_aware(r.get(field))
+        if a and (not v or v < a):
+            continue
+        if b and (not v or v > b):
+            continue
+        out.append(r)
+    return out
 
 
 @api_router.get("/reports/export-options")
@@ -1222,6 +1262,7 @@ async def update_settings(body: UserSettings, authorization: Optional[str] = Hea
         "accent_color": accent,
         "logo_base64": logo,
         "business_name": (body.business_name or "").strip()[:80],
+        "report_columns": body.report_columns or {},
     }
     await db.users.update_one(
         {"user_id": user["user_id"]}, {"$set": {"settings": payload, "updated_at": now_utc()}}

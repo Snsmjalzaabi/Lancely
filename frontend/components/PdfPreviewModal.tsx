@@ -3,6 +3,7 @@ import { Modal, Platform, Pressable, StyleSheet, Text, TouchableOpacity, View } 
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as WebBrowser from "expo-web-browser";
+import { WebView } from "react-native-webview";
 
 import { sharePdfUri } from "../lib/pdf";
 import { radii, spacing, useTheme, type ColorPalette } from "../lib/theme";
@@ -48,8 +49,16 @@ export function PdfPreviewModal({
         <Text style={styles.sub}>Preview the file or send it straight from here.</Text>
         {Platform.OS === "web" && uri ? (
           <View style={styles.webPreview}>
-            {/* iframe works on web; falls through to button on native */}
             {React.createElement("iframe", { src: uri, style: { width: "100%", height: 320, border: "0" } })}
+          </View>
+        ) : uri ? (
+          <View style={styles.webPreview}>
+            <WebView
+              source={{ uri }}
+              originWhitelist={["*"]}
+              style={{ width: "100%", height: 320 }}
+              testID="pdf-webview"
+            />
           </View>
         ) : null}
         <View style={{ gap: 10, marginTop: 18 }}>

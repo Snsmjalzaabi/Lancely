@@ -10,6 +10,7 @@ export type UserSettings = {
   accent_color: string | null;
   logo_base64: string | null;
   business_name: string;
+  report_columns?: Record<string, string[]>;
 };
 
 export type SettingsOptions = {
@@ -24,6 +25,7 @@ const DEFAULTS: UserSettings = {
   accent_color: null,
   logo_base64: null,
   business_name: "",
+  report_columns: {},
 };
 
 type Ctx = {

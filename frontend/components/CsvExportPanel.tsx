@@ -1,11 +1,14 @@
 import React, { useEffect, useState } from "react";
-import { Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as FileSystem from "expo-file-system";
 import * as Sharing from "expo-sharing";
 
-import { api, getToken } from "../lib/api";
+import { getToken } from "../lib/api";
+
+import { api } from "../lib/api";
+import { useSettings } from "../lib/settings";
 import { radii, spacing, useTheme, type ColorPalette } from "../lib/theme";
 
 type ColMeta = { key: string; label: string };
@@ -26,14 +29,20 @@ const DATASET_FILE: Record<DatasetKey, string> = {
 export function CsvExportPanel() {
   const { colors } = useTheme();
   const styles = makeStyles(colors);
+  const { settings, update } = useSettings();
   const [options, setOptions] = useState<Options | null>(null);
   const [open, setOpen] = useState<DatasetKey | null>(null);
-  const [chosen, setChosen] = useState<Record<DatasetKey, string[] | null>>({
-    invoices: null,
-    clients: null,
-    payments: null,
-  });
   const [busy, setBusy] = useState<DatasetKey | null>(null);
+  const [filters, setFilters] = useState<Record<DatasetKey, { from: string; to: string; status: string }>>({
+    invoices: { from: "", to: "", status: "" },
+    clients: { from: "", to: "", status: "" },
+    payments: { from: "", to: "", status: "" },
+  });
+  const [filtersOpen, setFiltersOpen] = useState<DatasetKey | null>(null);
+
+  const savedCols = settings.report_columns ?? {};
+  const chosenForDs = (ds: DatasetKey): string[] | null =>
+    savedCols[ds] && savedCols[ds].length > 0 ? savedCols[ds] : null;
 
   useEffect(() => {
     (async () => {
@@ -46,13 +55,25 @@ export function CsvExportPanel() {
     })();
   }, []);
 
+  const persistCols = async (ds: DatasetKey, cols: string[]) => {
+    const next = { ...savedCols, [ds]: cols };
+    await update({ report_columns: next });
+  };
+
   const download = async (ds: DatasetKey) => {
     setBusy(ds);
     try {
-      const colsParam = (chosen[ds] && chosen[ds]!.length > 0) ? `?cols=${chosen[ds]!.join(",")}` : "";
+      const params = new URLSearchParams();
+      const cols = chosenForDs(ds);
+      if (cols && cols.length > 0) params.set("cols", cols.join(","));
+      const f = filters[ds];
+      if (f.from) params.set("date_from", f.from);
+      if (f.to) params.set("date_to", f.to);
+      if (f.status) params.set("status", f.status);
+      const qs = params.toString();
       const base = process.env.EXPO_PUBLIC_BACKEND_URL;
       const tok = await getToken();
-      const url = `${base}/api/reports/${ds}.csv${colsParam}`;
+      const url = `${base}/api/reports/${ds}.csv${qs ? `?${qs}` : ""}`;
       if (Platform.OS === "web" && typeof window !== "undefined") {
         const r = await fetch(url, { headers: tok ? { Authorization: `Bearer ${tok}` } : {} });
         const blob = await r.blob();
@@ -81,35 +102,86 @@ export function CsvExportPanel() {
   return (
     <View style={styles.card} testID="reports-export-panel">
       <Text style={styles.title}>Export data</Text>
-      <Text style={styles.sub}>Pick a dataset, choose columns, then download.</Text>
+      <Text style={styles.sub}>Choose columns & filters, then download.</Text>
       {(["invoices", "clients", "payments"] as DatasetKey[]).map((ds) => {
         const optsForDs = options?.[ds] ?? [];
-        const selectedCount = chosen[ds]?.length ?? optsForDs.length;
+        const cols = chosenForDs(ds);
+        const selectedCount = cols ? cols.length : optsForDs.length;
+        const f = filters[ds];
+        const hasFilter = !!(f.from || f.to || f.status);
         return (
-          <View key={ds} style={styles.row}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.dsLabel}>{DATASET_LABEL[ds]}</Text>
-              <Text style={styles.dsHint}>
-                {selectedCount} / {optsForDs.length} columns
-              </Text>
+          <View key={ds} style={styles.dsBlock}>
+            <View style={styles.row}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.dsLabel}>{DATASET_LABEL[ds]}</Text>
+                <Text style={styles.dsHint}>
+                  {selectedCount} / {optsForDs.length} columns {hasFilter ? "· filtered" : ""}
+                </Text>
+              </View>
+              <TouchableOpacity
+                style={styles.colsBtn}
+                onPress={() => setFiltersOpen(filtersOpen === ds ? null : ds)}
+                testID={`csv-filter-${ds}`}
+              >
+                <Ionicons name="funnel-outline" size={14} color={colors.textPrimary} />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.colsBtn}
+                onPress={() => setOpen(ds)}
+                testID={`csv-cols-${ds}`}
+              >
+                <Ionicons name="options-outline" size={14} color={colors.textPrimary} />
+                <Text style={styles.colsBtnText}>Columns</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.dlBtn}
+                onPress={() => download(ds)}
+                disabled={busy === ds}
+                testID={`csv-export-${ds}`}
+              >
+                <Ionicons name="download-outline" size={14} color={colors.textInverse} />
+                <Text style={styles.dlBtnText}>{busy === ds ? "…" : "CSV"}</Text>
+              </TouchableOpacity>
             </View>
-            <TouchableOpacity
-              style={styles.colsBtn}
-              onPress={() => setOpen(ds)}
-              testID={`csv-cols-${ds}`}
-            >
-              <Ionicons name="options-outline" size={14} color={colors.textPrimary} />
-              <Text style={styles.colsBtnText}>Columns</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.dlBtn}
-              onPress={() => download(ds)}
-              disabled={busy === ds}
-              testID={`csv-export-${ds}`}
-            >
-              <Ionicons name="download-outline" size={14} color={colors.textInverse} />
-              <Text style={styles.dlBtnText}>{busy === ds ? "…" : "CSV"}</Text>
-            </TouchableOpacity>
+            {filtersOpen === ds ? (
+              <View style={styles.filterBox}>
+                <View style={styles.filterRow}>
+                  <Text style={styles.filterLabel}>From</Text>
+                  <TextInput
+                    value={f.from}
+                    onChangeText={(v) => setFilters((p) => ({ ...p, [ds]: { ...p[ds], from: v } }))}
+                    placeholder="YYYY-MM-DD"
+                    placeholderTextColor={colors.textMuted}
+                    style={styles.filterInput}
+                    testID={`csv-filter-${ds}-from`}
+                  />
+                </View>
+                <View style={styles.filterRow}>
+                  <Text style={styles.filterLabel}>To</Text>
+                  <TextInput
+                    value={f.to}
+                    onChangeText={(v) => setFilters((p) => ({ ...p, [ds]: { ...p[ds], to: v } }))}
+                    placeholder="YYYY-MM-DD"
+                    placeholderTextColor={colors.textMuted}
+                    style={styles.filterInput}
+                    testID={`csv-filter-${ds}-to`}
+                  />
+                </View>
+                {ds === "invoices" ? (
+                  <View style={styles.filterRow}>
+                    <Text style={styles.filterLabel}>Status</Text>
+                    <TextInput
+                      value={f.status}
+                      onChangeText={(v) => setFilters((p) => ({ ...p, [ds]: { ...p[ds], status: v } }))}
+                      placeholder="pending,overdue,paid"
+                      placeholderTextColor={colors.textMuted}
+                      style={styles.filterInput}
+                      testID={`csv-filter-${ds}-status`}
+                    />
+                  </View>
+                ) : null}
+              </View>
+            ) : null}
           </View>
         );
       })}
@@ -118,10 +190,10 @@ export function CsvExportPanel() {
         <ColumnsSheet
           dataset={open}
           allCols={options?.[open] ?? []}
-          value={chosen[open] ?? (options?.[open] ?? []).map((c) => c.key)}
+          value={chosenForDs(open) ?? (options?.[open] ?? []).map((c) => c.key)}
           onClose={() => setOpen(null)}
-          onSave={(next) => {
-            setChosen((p) => ({ ...p, [open]: next }));
+          onSave={async (next) => {
+            await persistCols(open, next);
             setOpen(null);
           }}
         />
@@ -260,6 +332,30 @@ const makeStyles = (colors: ColorPalette) =>
       backgroundColor: colors.primary,
     },
     dlBtnText: { color: colors.textInverse, fontWeight: "700", fontSize: 12 },
+    dsBlock: {
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+    },
+    filterBox: {
+      backgroundColor: colors.bgAlt,
+      borderRadius: radii.md,
+      padding: 10,
+      marginBottom: 8,
+      gap: 6,
+    },
+    filterRow: { flexDirection: "row", alignItems: "center", gap: 8 },
+    filterLabel: { width: 56, color: colors.textSecondary, fontSize: 12, fontWeight: "600" },
+    filterInput: {
+      flex: 1,
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: radii.sm,
+      paddingHorizontal: 10,
+      paddingVertical: 8,
+      fontSize: 13,
+      color: colors.textPrimary,
+    },
     backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.45)" },
     sheet: {
       position: "absolute",
