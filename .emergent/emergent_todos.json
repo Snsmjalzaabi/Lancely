@@ -1,30 +1,26 @@
 [
   {
-    "content": "Phase 1: Backend foundation — plan fields, billing module, webhook, plan dep",
-    "status": "completed"
+    "content": "Harden BillingContext + Pricing against missing/incomplete RC config",
+    "status": "in_progress"
   },
   {
-    "content": "Phase 2: Gate Pro features — AI, recurring, templates, free limits, PDF watermark",
-    "status": "completed"
-  },
-  {
-    "content": "Phase 3: Frontend — BillingProvider, Pricing page, Billing tab, global Upgrade modal, PlanBadge",
-    "status": "completed"
-  },
-  {
-    "content": "Phase 4: E2E test — trial users get Pro access, free users gated correctly, upgrade modal works",
-    "status": "completed"
-  },
-  {
-    "content": "MONETIZATION_SETUP.md walkthrough written",
-    "status": "completed"
-  },
-  {
-    "content": "POST-MONETIZATION: Build public landing page with 500+ words to fix SEO",
+    "content": "Verify backend doesn't crash with missing RC_SECRET_API_KEY",
     "status": "pending"
   },
   {
-    "content": "POST-MONETIZATION: Verify sitemap on production after redeploy",
+    "content": "Update title (Lancely - Freelance OS), favicons, sitemap, robots verified",
+    "status": "pending"
+  },
+  {
+    "content": "Run lint sweep on backend + frontend",
+    "status": "pending"
+  },
+  {
+    "content": "Run deployment_agent health check",
+    "status": "pending"
+  },
+  {
+    "content": "Write redeployment summary doc",
     "status": "pending"
   }
 ]
