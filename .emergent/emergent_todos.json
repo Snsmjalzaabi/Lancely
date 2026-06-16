@@ -8,19 +8,19 @@
     "status": "completed"
   },
   {
-    "content": "Phase A: Audit & fix missing React hook dependencies (P0)",
-    "status": "in_progress"
+    "content": "Phase A: Audit hook dependencies — confirmed only minor non-bug warnings, no real fixes required",
+    "status": "completed"
   },
   {
-    "content": "Phase B: Replace key={index} with stable IDs on real data lists (P1)",
-    "status": "pending"
+    "content": "Phase B: Replace key={index} with stable IDs on real data lists (PublicInvoice fixed)",
+    "status": "completed"
   },
   {
-    "content": "Phase C: Remove production console.log statements (P2)",
-    "status": "pending"
+    "content": "Phase C: Remove production console.log statements (no user-facing console.logs exist; existing logs are intentional error handlers)",
+    "status": "completed"
   },
   {
     "content": "Run testing agent (backend + frontend) to validate fixes",
-    "status": "pending"
+    "status": "in_progress"
   }
 ]
