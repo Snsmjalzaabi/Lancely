@@ -65,7 +65,7 @@ export default function Quotations() {
       <Card className="rounded-2xl border border-border bg-card overflow-hidden [box-shadow:var(--shadow-elev-1)]">
         <CardContent className="p-0">
           {loading ? (
-            <div className="p-6 space-y-3">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}</div>
+            <div className="p-6 space-y-3">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={`skel-${i}`} className="h-10 w-full" />)}</div>
           ) : filtered.length === 0 ? (
             <div className="p-6"><EmptyState icon={FileText} title={list.length === 0 ? 'No quotations yet' : 'No quotations match your search'} description={list.length === 0 ? 'Create your first quotation and impress your clients with professional documents.' : undefined} action={list.length === 0 ? <Button onClick={() => navigate('/quotations/new')} className="bg-primary text-primary-foreground hover:bg-primary/90" data-testid="quotations-empty-add"><Plus className="h-4 w-4 mr-1.5" /> New Quotation</Button> : null} testid="quotations-empty-state" /></div>
           ) : (

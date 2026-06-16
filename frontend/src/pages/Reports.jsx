@@ -35,7 +35,7 @@ export default function Reports() {
       .catch(err => { console.error('reports load', err); setLoading(false); });
   }, []);
 
-  if (loading) return <div className="space-y-4">{Array.from({length:3}).map((_,i)=><Skeleton key={i} className="h-40 w-full rounded-2xl" />)}</div>;
+  if (loading) return <div className="space-y-4">{Array.from({length:3}).map((_,i)=><Skeleton key={`skel-${i}`} className="h-40 w-full rounded-2xl" />)}</div>;
 
   return (
     <div className="space-y-5">

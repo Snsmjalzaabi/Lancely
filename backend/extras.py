@@ -901,9 +901,20 @@ async def ai_parse_invoice(prompt_text: str, currency: str = "AED") -> dict:
     }
 
 
-async def ai_compose_email(*, business_name: str, client_name: Optional[str], invoice_number: Optional[str],
-                           currency: str, outstanding: float, due_date: Optional[str], days_overdue: int,
-                           flavor: str, extra_context: Optional[str]) -> dict:
+class EmailComposeContext(BaseModel):
+    """Bundled context for ai_compose_email — reduces argument count and clarifies intent."""
+    business_name: str
+    client_name: Optional[str] = None
+    invoice_number: Optional[str] = None
+    currency: str = "AED"
+    outstanding: float = 0.0
+    due_date: Optional[str] = None
+    days_overdue: int = 0
+    flavor: str = "gentle"
+    extra_context: Optional[str] = None
+
+
+async def ai_compose_email(ctx: EmailComposeContext) -> dict:
     flavor_map = {
         "gentle": "polite, warm, and assume the client just got busy",
         "firm": "professional but firm, indicate this is not the first attempt",
@@ -912,7 +923,7 @@ async def ai_compose_email(*, business_name: str, client_name: Optional[str], in
         "thank_you": "thank the client for prompt payment and reinforce the relationship",
         "project_update": "share a friendly project status update and next steps",
     }
-    tone = flavor_map.get(flavor, "professional and warm")
+    tone = flavor_map.get(ctx.flavor, "professional and warm")
     system_prompt = (
         "You write short, professional client emails for a UAE-based freelancer. "
         "Tone: " + tone + ". Keep it 3-5 sentences. Address the client by first name when known. "
@@ -921,17 +932,17 @@ async def ai_compose_email(*, business_name: str, client_name: Optional[str], in
         "Reply with ONLY valid JSON, no markdown, no commentary."
     )
     parts = [
-        f"Freelancer / Business name: {business_name}",
-        f"Client name: {client_name or 'Client'}",
-        f"Invoice number: {invoice_number or 'N/A'}",
-        f"Currency: {currency}",
-        f"Outstanding amount: {outstanding:.2f}",
-        f"Due date: {due_date or 'unspecified'}",
-        f"Days overdue (negative = days until due): {days_overdue}",
-        f"Email flavor: {flavor}",
+        f"Freelancer / Business name: {ctx.business_name}",
+        f"Client name: {ctx.client_name or 'Client'}",
+        f"Invoice number: {ctx.invoice_number or 'N/A'}",
+        f"Currency: {ctx.currency}",
+        f"Outstanding amount: {ctx.outstanding:.2f}",
+        f"Due date: {ctx.due_date or 'unspecified'}",
+        f"Days overdue (negative = days until due): {ctx.days_overdue}",
+        f"Email flavor: {ctx.flavor}",
     ]
-    if extra_context:
-        parts.append(f"Extra context from freelancer: {extra_context}")
+    if ctx.extra_context:
+        parts.append(f"Extra context from freelancer: {ctx.extra_context}")
     raw = await ai_call(system_prompt, "\n".join(parts), json_only=True)
     try:
         parsed = json.loads(raw)
@@ -1003,7 +1014,7 @@ def attach_ai_routes(router: APIRouter, get_current_user, db):
                     days_overdue = (now_utc().date() - dd).days
                 except Exception:
                     pass
-        result = await ai_compose_email(
+        result = await ai_compose_email(EmailComposeContext(
             business_name=user.get("business_name") or user.get("name") or "Lancely",
             client_name=(client or {}).get("name"),
             invoice_number=(inv or {}).get("number"),
@@ -1013,7 +1024,7 @@ def attach_ai_routes(router: APIRouter, get_current_user, db):
             days_overdue=days_overdue,
             flavor=data.flavor,
             extra_context=data.extra_context,
-        )
+        ))
         return {**result, "to": (client or {}).get("email") or ""}
 
     @router.post("/ai/categorize-expense")

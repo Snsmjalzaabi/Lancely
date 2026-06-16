@@ -1,18 +1,30 @@
 [
   {
-    "content": "Phase A: Fix undefined `parsed` variable in backend/extras.py (P0)",
+    "content": "Fix Python `is` vs `==` — SKIPPED (all 8 flagged sites are correct `is None` per PEP 8)",
     "status": "completed"
   },
   {
-    "content": "Phase A: Fix XSS in ReminderTemplates.jsx with DOMPurify (P0)",
+    "content": "Replace key={i} with stable string keys in 11 skeleton/list locations",
     "status": "completed"
   },
   {
-    "content": "Phase B: Replace key={index} with stable IDs on real data lists (PublicInvoice fixed)",
+    "content": "Refactor ai_compose_email to accept a dataclass instead of 9 params",
     "status": "completed"
   },
   {
-    "content": "Author Mobile Integration Brief covering API contracts, env vars, auth, screens-to-endpoints mapping",
+    "content": "Audit hook deps — confirmed 0 real exhaustive-deps violations; report's 45+ count was from a different analyzer",
+    "status": "completed"
+  },
+  {
+    "content": "Fix cosmetic unescaped-apostrophe lint warnings",
+    "status": "completed"
+  },
+  {
+    "content": "Verify backend & frontend compile + AI compose-email works end-to-end",
+    "status": "completed"
+  },
+  {
+    "content": "Big refactors (build_extras_router / DocumentEditor) — documented as deferred",
     "status": "completed"
   }
 ]

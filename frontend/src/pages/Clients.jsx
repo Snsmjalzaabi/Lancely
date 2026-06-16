@@ -93,7 +93,7 @@ export default function Clients() {
         <CardContent className="p-0">
           {loading ? (
             <div className="p-6 space-y-3">
-              {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}
+              {Array.from({ length: 4 }).map((_, i) => <Skeleton key={`skel-${i}`} className="h-10 w-full" />)}
             </div>
           ) : filtered.length === 0 ? (
             <div className="p-6">

@@ -35,7 +35,7 @@ export default function ActivityFeed() {
       <div><h2 className="font-display text-xl sm:text-2xl font-semibold tracking-tight">Activity</h2><p className="text-sm text-muted-foreground">Audit log of changes across your workspace.</p></div>
       <Card className="rounded-2xl border border-border bg-card">
         <CardContent className="p-0">
-          {loading ? <div className="p-6 space-y-2">{Array.from({length:5}).map((_,i)=><Skeleton key={i} className="h-10 w-full" />)}</div>
+          {loading ? <div className="p-6 space-y-2">{Array.from({length:5}).map((_,i)=><Skeleton key={`skel-${i}`} className="h-10 w-full" />)}</div>
           : rows.length === 0 ? <div className="p-6"><EmptyState icon={Activity} title="No activity yet" description="Once you create clients, invoices, or expenses, you'll see them here." testid="activity-empty" /></div>
           : <div className="divide-y divide-border">{rows.map(r => (
               <div key={r.id} className="flex items-center gap-3 px-5 py-3 hover:bg-muted/20" data-testid={`activity-row-${r.id}`}>

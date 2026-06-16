@@ -97,7 +97,7 @@ export default function Projects() {
       <Card className="rounded-2xl border border-border bg-card overflow-hidden [box-shadow:var(--shadow-elev-1)]">
         <CardContent className="p-0">
           {loading ? (
-            <div className="p-6 space-y-3">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}</div>
+            <div className="p-6 space-y-3">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={`skel-${i}`} className="h-10 w-full" />)}</div>
           ) : list.length === 0 ? (
             <div className="p-6"><EmptyState icon={FolderKanban} title="No projects yet" description="Track your engagements, deadlines and project values." action={<Button onClick={openCreate} className="bg-primary text-primary-foreground hover:bg-primary/90" data-testid="projects-empty-add"><Plus className="h-4 w-4 mr-1.5" /> New Project</Button>} testid="projects-empty-state" /></div>
           ) : (

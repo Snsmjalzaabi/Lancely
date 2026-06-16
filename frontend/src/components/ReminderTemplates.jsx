@@ -108,7 +108,7 @@ export default function ReminderTemplates() {
         <Button size="sm" onClick={openCreate} className="bg-primary text-primary-foreground hover:bg-primary/90" data-testid="reminder-tpl-add"><Plus className="h-4 w-4 mr-1.5" /> New template</Button>
       </CardHeader>
       <CardContent>
-        {loading ? <div className="space-y-2">{Array.from({length:3}).map((_,i) => <Skeleton key={i} className="h-12 w-full" />)}</div> : (
+        {loading ? <div className="space-y-2">{Array.from({length:3}).map((_,i) => <Skeleton key={`skel-${i}`} className="h-12 w-full" />)}</div> : (
           <div className="divide-y divide-border">
             {list.map(t => (
               <div key={t.id} className="flex items-center gap-3 py-3" data-testid={`reminder-tpl-row-${t.id}`}>

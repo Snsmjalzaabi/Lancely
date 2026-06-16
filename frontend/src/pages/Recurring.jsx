@@ -89,7 +89,7 @@ export default function Recurring() {
       <Card className="rounded-2xl border border-border bg-card overflow-hidden [box-shadow:var(--shadow-elev-1)]">
         <CardContent className="p-0">
           {loading ? (
-            <div className="p-6 space-y-3">{Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}</div>
+            <div className="p-6 space-y-3">{Array.from({ length: 3 }).map((_, i) => <Skeleton key={`skel-${i}`} className="h-10 w-full" />)}</div>
           ) : list.length === 0 ? (
             <div className="p-6"><EmptyState icon={Repeat} title="No recurring invoices yet" description="Create a template and auto-generate invoices weekly, monthly, quarterly, or yearly." action={<Button onClick={() => navigate('/recurring/new')} className="bg-primary text-primary-foreground hover:bg-primary/90" data-testid="recurring-empty-add"><Plus className="h-4 w-4 mr-1.5" /> New Recurring</Button>} testid="recurring-empty-state" /></div>
           ) : (

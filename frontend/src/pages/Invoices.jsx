@@ -81,7 +81,7 @@ export default function Invoices() {
       <Card className="rounded-2xl border border-border bg-card overflow-hidden [box-shadow:var(--shadow-elev-1)]">
         <CardContent className="p-0">
           {loading ? (
-            <div className="p-6 space-y-3">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}</div>
+            <div className="p-6 space-y-3">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={`skel-${i}`} className="h-10 w-full" />)}</div>
           ) : filtered.length === 0 ? (
             <div className="p-6"><EmptyState icon={Receipt} title={list.length === 0 ? 'No invoices yet' : 'No invoices match your filters'} description={list.length === 0 ? 'Create an invoice and track payment status in one place.' : undefined} action={list.length === 0 ? <Button onClick={() => navigate('/invoices/new')} className="bg-primary text-primary-foreground hover:bg-primary/90" data-testid="invoices-empty-add"><Plus className="h-4 w-4 mr-1.5" /> New Invoice</Button> : null} testid="invoices-empty-state" /></div>
           ) : (

@@ -101,7 +101,7 @@ export default function Expenses() {
 
       <Card className="rounded-2xl border border-border bg-card overflow-hidden">
         <CardContent className="p-0">
-          {loading ? <div className="p-6 space-y-3">{Array.from({length:4}).map((_,i) => <Skeleton key={i} className="h-10 w-full" />)}</div>
+          {loading ? <div className="p-6 space-y-3">{Array.from({length:4}).map((_,i) => <Skeleton key={`skel-${i}`} className="h-10 w-full" />)}</div>
             : list.length === 0 ? <div className="p-6"><EmptyState icon={ReceiptIcon} title="No expenses yet" description="Log your first business expense. Categories like software, fuel, and marketing roll up into your P&L." action={<Button onClick={openCreate} className="bg-primary text-primary-foreground hover:bg-primary/90" data-testid="expenses-empty-add"><Plus className="h-4 w-4 mr-1.5" /> Add Expense</Button>} testid="expenses-empty-state" /></div>
             : <Table data-testid="expenses-table"><TableHeader><TableRow className="bg-muted/40 hover:bg-muted/40"><TableHead>Date</TableHead><TableHead>Vendor</TableHead><TableHead>Category</TableHead><TableHead className="text-right">Amount</TableHead><TableHead className="w-12"></TableHead></TableRow></TableHeader>
               <TableBody>{list.map(e => (

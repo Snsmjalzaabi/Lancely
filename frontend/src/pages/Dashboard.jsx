@@ -73,7 +73,7 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {loading ? (
           Array.from({ length: 4 }).map((_, i) => (
-            <Card key={i} className="rounded-2xl border border-border bg-card">
+            <Card key={`skel-${i}`} className="rounded-2xl border border-border bg-card">
               <CardContent className="p-5">
                 <Skeleton className="h-3 w-24" />
                 <Skeleton className="h-7 w-28 mt-3" />

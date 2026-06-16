@@ -66,13 +66,13 @@ export default function Payments() {
     catch { toast.error('Failed'); }
   };
 
-  if (loading) return <div className="space-y-4">{Array.from({length:3}).map((_, i) => <Skeleton key={i} className="h-40 w-full rounded-2xl" />)}</div>;
+  if (loading) return <div className="space-y-4">{Array.from({length:3}).map((_, i) => <Skeleton key={`skel-${i}`} className="h-40 w-full rounded-2xl" />)}</div>;
 
   return (
     <div className="space-y-5">
       <div>
         <h2 className="font-display text-xl sm:text-2xl font-semibold tracking-tight">Payments & Reminders</h2>
-        <p className="text-sm text-muted-foreground">A focused view of what needs to be paid, what's late, and what's been settled.</p>
+        <p className="text-sm text-muted-foreground">A focused view of what needs to be paid, what&apos;s late, and what&apos;s been settled.</p>
       </div>
       <Section icon={AlertTriangle} title="Overdue" tone="red" count={data.overdue.length} testid="payments-section-overdue">
         {data.overdue.length === 0 ? <div className="text-sm text-muted-foreground py-2">Nothing overdue. Great work.</div> : data.overdue.map(inv => <Row key={inv.id} inv={inv} navigate={navigate} onPaid={markPaid} />)}
