@@ -9,18 +9,18 @@
   },
   {
     "content": "Fix N+1 in process_due_reminders with batched queries (BLOCKER)",
-    "status": "in_progress"
+    "status": "completed"
   },
   {
     "content": "Add projections to /api/reports/client-profitability (BLOCKER)",
-    "status": "pending"
+    "status": "completed"
   },
   {
     "content": "Add projections to /api/analytics/dashboard (BLOCKER)",
     "status": "completed"
   },
   {
-    "content": "Re-run deployment_agent to verify pass",
-    "status": "pending"
+    "content": "Re-run deployment_agent — ✅ PASS",
+    "status": "completed"
   }
 ]
