@@ -1078,6 +1078,536 @@ class LancelyAPITester:
         
         return all_passed
     
+
+    # ==================== PHASE 4 TESTS ====================
+    
+    def test_currencies_endpoint(self):
+        """Test GET /api/currencies returns 6 supported currencies"""
+        success, response = self.run_test(
+            "Currencies: GET /api/currencies",
+            "GET",
+            "currencies",
+            200,
+            description="Should return AED, USD, EUR, GBP, SAR, INR"
+        )
+        if success:
+            currencies = response
+            codes = [c.get('code') for c in currencies]
+            expected = ['AED', 'USD', 'EUR', 'GBP', 'SAR', 'INR']
+            if set(codes) == set(expected):
+                self.log(f"✅ All 6 currencies present: {codes}", "PASS")
+            else:
+                self.log(f"❌ Currency mismatch. Expected {expected}, got {codes}", "FAIL")
+    
+    def test_user_defaults_currency_theme(self):
+        """Test new user defaults: currency='AED', theme='dark'"""
+        # Register a new user
+        timestamp = int(time.time())
+        email = f"qa+defaults+{timestamp}@lancely.ae"
+        success, response = self.run_test(
+            "User defaults: Register and check currency/theme",
+            "POST",
+            "auth/register",
+            200,
+            data={
+                "email": email,
+                "password": "TestPass123!",
+                "name": "Defaults Test User"
+            },
+            description="New user should have currency='AED' and theme='dark'"
+        )
+        if success:
+            user = response.get('user', {})
+            currency = user.get('currency')
+            theme = user.get('theme')
+            if currency == 'AED' and theme == 'dark':
+                self.log(f"✅ User defaults correct: currency={currency}, theme={theme}", "PASS")
+            else:
+                self.log(f"❌ User defaults incorrect: currency={currency}, theme={theme}", "FAIL")
+    
+    def test_update_user_currency_theme(self):
+        """Test PUT /api/auth/me with currency and theme"""
+        # Update to USD and light
+        success, response = self.run_test(
+            "User update: Change currency to USD and theme to light",
+            "PUT",
+            "auth/me",
+            200,
+            data={"currency": "USD", "theme": "light"},
+            description="Should update currency and theme"
+        )
+        if success:
+            if response.get('currency') == 'USD' and response.get('theme') == 'light':
+                self.log("✅ Currency and theme updated successfully", "PASS")
+            else:
+                self.log(f"❌ Update failed: currency={response.get('currency')}, theme={response.get('theme')}", "FAIL")
+        
+        # Test invalid currency
+        self.run_test(
+            "User update: Invalid currency 'XYZ' should return 400",
+            "PUT",
+            "auth/me",
+            400,
+            data={"currency": "XYZ"},
+            description="Should reject invalid currency"
+        )
+        
+        # Test invalid theme
+        self.run_test(
+            "User update: Invalid theme 'rainbow' should return 400",
+            "PUT",
+            "auth/me",
+            400,
+            data={"theme": "rainbow"},
+            description="Should reject invalid theme"
+        )
+        
+        # Restore to AED and dark for other tests
+        self.run_test(
+            "User update: Restore to AED and dark",
+            "PUT",
+            "auth/me",
+            200,
+            data={"currency": "AED", "theme": "dark"}
+        )
+    
+    def test_invoice_with_currency(self):
+        """Test POST /api/invoices with currency"""
+        # Create a client first
+        success, client = self.run_test(
+            "Invoice currency: Create test client",
+            "POST",
+            "clients",
+            200,
+            data={"name": "Currency Test Client", "email": "currency@test.com"}
+        )
+        if not success:
+            return
+        
+        client_id = client.get('id')
+        
+        # Create invoice with USD currency
+        success, invoice = self.run_test(
+            "Invoice currency: Create invoice with currency=USD",
+            "POST",
+            "invoices",
+            200,
+            data={
+                "client_id": client_id,
+                "title": "USD Invoice",
+                "items": [{"description": "Test item", "quantity": 1, "rate": 100}],
+                "currency": "USD"
+            },
+            description="Should save currency=USD on the invoice"
+        )
+        if success:
+            if invoice.get('currency') == 'USD':
+                self.log("✅ Invoice created with USD currency", "PASS")
+            else:
+                self.log(f"❌ Invoice currency incorrect: {invoice.get('currency')}", "FAIL")
+        
+        # Create invoice without currency (should default to user's currency)
+        success, invoice2 = self.run_test(
+            "Invoice currency: Create invoice without currency (should default to user's)",
+            "POST",
+            "invoices",
+            200,
+            data={
+                "client_id": client_id,
+                "title": "Default Currency Invoice",
+                "items": [{"description": "Test item", "quantity": 1, "rate": 100}]
+            },
+            description="Should default to user's currency (AED)"
+        )
+        if success:
+            if invoice2.get('currency') == 'AED':
+                self.log("✅ Invoice defaulted to user's currency (AED)", "PASS")
+            else:
+                self.log(f"❌ Invoice currency should be AED, got: {invoice2.get('currency')}", "FAIL")
+    
+    def test_quotation_currency_preservation(self):
+        """Test quotation->invoice conversion preserves currency"""
+        # Create a client
+        success, client = self.run_test(
+            "Quotation currency: Create test client",
+            "POST",
+            "clients",
+            200,
+            data={"name": "Quotation Currency Client"}
+        )
+        if not success:
+            return
+        
+        client_id = client.get('id')
+        
+        # Create quotation with EUR currency
+        success, quotation = self.run_test(
+            "Quotation currency: Create quotation with EUR",
+            "POST",
+            "quotations",
+            200,
+            data={
+                "client_id": client_id,
+                "title": "EUR Quotation",
+                "items": [{"description": "Test item", "quantity": 2, "rate": 50}],
+                "currency": "EUR"
+            }
+        )
+        if not success:
+            return
+        
+        qid = quotation.get('id')
+        
+        # Convert to invoice
+        success, invoice = self.run_test(
+            "Quotation currency: Convert EUR quotation to invoice",
+            "POST",
+            f"quotations/{qid}/convert",
+            200,
+            description="Invoice should preserve EUR currency from quotation"
+        )
+        if success:
+            if invoice.get('currency') == 'EUR':
+                self.log("✅ Invoice preserved EUR currency from quotation", "PASS")
+            else:
+                self.log(f"❌ Invoice currency should be EUR, got: {invoice.get('currency')}", "FAIL")
+    
+    def test_csv_exports(self):
+        """Test CSV export endpoints"""
+        entities = ['clients', 'invoices', 'quotations', 'projects']
+        
+        for entity in entities:
+            # Test with valid token
+            url = f"{self.base_url}/export/{entity}.csv?token={self.token}"
+            try:
+                response = requests.get(url, timeout=10)
+                if response.status_code == 200:
+                    content_type = response.headers.get('Content-Type', '')
+                    content_disp = response.headers.get('Content-Disposition', '')
+                    
+                    if 'text/csv' in content_type and 'attachment' in content_disp:
+                        # Check if CSV has header row
+                        lines = response.text.strip().split('\n')
+                        if len(lines) >= 1:  # At least header
+                            self.tests_run += 1
+                            self.tests_passed += 1
+                            self.log(f"✅ CSV export {entity}: Valid CSV with {len(lines)} lines", "PASS")
+                        else:
+                            self.tests_run += 1
+                            self.tests_failed += 1
+                            self.log(f"❌ CSV export {entity}: Empty CSV", "FAIL")
+                    else:
+                        self.tests_run += 1
+                        self.tests_failed += 1
+                        self.log(f"❌ CSV export {entity}: Wrong content type or disposition", "FAIL")
+                else:
+                    self.tests_run += 1
+                    self.tests_failed += 1
+                    self.log(f"❌ CSV export {entity}: Status {response.status_code}", "FAIL")
+            except Exception as e:
+                self.tests_run += 1
+                self.tests_failed += 1
+                self.log(f"❌ CSV export {entity}: Error {str(e)}", "FAIL")
+        
+        # Test without token (should return 401)
+        self.run_test(
+            "CSV export: Without token should return 401",
+            "GET",
+            "export/clients.csv",
+            401,
+            description="CSV export requires authentication"
+        )
+    
+    def test_recurring_invoices_crud(self):
+        """Test recurring invoices CRUD operations"""
+        # Create a client first
+        success, client = self.run_test(
+            "Recurring: Create test client",
+            "POST",
+            "clients",
+            200,
+            data={"name": "Recurring Test Client"}
+        )
+        if not success:
+            return
+        
+        client_id = client.get('id')
+        
+        # Create recurring invoice
+        success, recurring = self.run_test(
+            "Recurring: Create monthly recurring invoice",
+            "POST",
+            "recurring-invoices",
+            200,
+            data={
+                "client_id": client_id,
+                "title": "Monthly Retainer",
+                "frequency": "monthly",
+                "currency": "AED",
+                "items": [{"description": "Monthly service", "quantity": 1, "rate": 1000}],
+                "due_days": 14
+            },
+            description="Should create recurring invoice template"
+        )
+        if not success:
+            return
+        
+        rid = recurring.get('id')
+        
+        # Get recurring invoice
+        self.run_test(
+            "Recurring: GET recurring invoice by ID",
+            "GET",
+            f"recurring-invoices/{rid}",
+            200
+        )
+        
+        # List recurring invoices
+        success, list_resp = self.run_test(
+            "Recurring: List all recurring invoices",
+            "GET",
+            "recurring-invoices",
+            200
+        )
+        if success:
+            if len(list_resp) > 0:
+                self.log(f"✅ Found {len(list_resp)} recurring invoice(s)", "PASS")
+        
+        # Update recurring invoice
+        self.run_test(
+            "Recurring: Update recurring invoice",
+            "PUT",
+            f"recurring-invoices/{rid}",
+            200,
+            data={
+                "client_id": client_id,
+                "title": "Updated Monthly Retainer",
+                "frequency": "monthly",
+                "currency": "AED",
+                "items": [{"description": "Updated service", "quantity": 1, "rate": 1200}],
+                "due_days": 14
+            }
+        )
+        
+        # Test invalid frequency
+        self.run_test(
+            "Recurring: Invalid frequency 'fortnightly' should return 400",
+            "POST",
+            "recurring-invoices",
+            400,
+            data={
+                "client_id": client_id,
+                "title": "Invalid Frequency",
+                "frequency": "fortnightly",
+                "items": []
+            },
+            description="Should reject invalid frequency"
+        )
+        
+        # Test invalid client_id
+        self.run_test(
+            "Recurring: Invalid client_id should return 400",
+            "POST",
+            "recurring-invoices",
+            400,
+            data={
+                "client_id": "invalid-client-id",
+                "title": "Invalid Client",
+                "frequency": "monthly",
+                "items": []
+            },
+            description="Should reject invalid client_id"
+        )
+        
+        # Store for generate test
+        self.recurring_id = rid
+    
+    def test_recurring_generate(self):
+        """Test POST /api/recurring-invoices/{id}/generate"""
+        if not hasattr(self, 'recurring_id'):
+            self.log("⚠️ Skipping generate test - no recurring invoice created", "WARN")
+            return
+        
+        # Get initial state
+        success, before = self.run_test(
+            "Recurring generate: Get initial state",
+            "GET",
+            f"recurring-invoices/{self.recurring_id}",
+            200
+        )
+        if not success:
+            return
+        
+        initial_count = before.get('generated_count', 0)
+        initial_next_run = before.get('next_run_date')
+        
+        # Generate invoice
+        success, invoice = self.run_test(
+            "Recurring generate: Generate invoice from template",
+            "POST",
+            f"recurring-invoices/{self.recurring_id}/generate",
+            200,
+            description="Should create invoice and update template"
+        )
+        if not success:
+            return
+        
+        # Verify invoice was created
+        if invoice.get('number'):
+            self.log(f"✅ Invoice {invoice.get('number')} created", "PASS")
+        
+        # Get updated state
+        success, after = self.run_test(
+            "Recurring generate: Get updated state",
+            "GET",
+            f"recurring-invoices/{self.recurring_id}",
+            200
+        )
+        if success:
+            new_count = after.get('generated_count', 0)
+            new_next_run = after.get('next_run_date')
+            
+            if new_count == initial_count + 1:
+                self.log(f"✅ Generated count incremented: {initial_count} -> {new_count}", "PASS")
+            else:
+                self.log(f"❌ Generated count not incremented: {initial_count} -> {new_count}", "FAIL")
+            
+            if new_next_run != initial_next_run:
+                self.log(f"✅ Next run date advanced: {initial_next_run} -> {new_next_run}", "PASS")
+            else:
+                self.log(f"❌ Next run date not advanced: {initial_next_run}", "FAIL")
+    
+    def test_recurring_run_due(self):
+        """Test POST /api/recurring-invoices/run-due"""
+        success, response = self.run_test(
+            "Recurring run-due: Process all due templates",
+            "POST",
+            "recurring-invoices/run-due",
+            200,
+            description="Should generate invoices for due templates"
+        )
+        if success:
+            count = response.get('count', 0)
+            generated = response.get('generated', [])
+            self.log(f"✅ Run-due completed: {count} invoice(s) generated", "PASS")
+            
+            # Verify no templates are due after running
+            success2, list_resp = self.run_test(
+                "Recurring run-due: Verify no templates due after run",
+                "GET",
+                "recurring-invoices",
+                200
+            )
+            if success2:
+                today = datetime.now().date().isoformat()
+                due_count = sum(1 for r in list_resp if r.get('is_active') and r.get('next_run_date', '9999') <= today)
+                if due_count == 0:
+                    self.log("✅ No templates due after run-due", "PASS")
+                else:
+                    self.log(f"⚠️ {due_count} template(s) still due after run-due", "WARN")
+    
+    def test_email_status(self):
+        """Test GET /api/email/status"""
+        success, response = self.run_test(
+            "Email: GET /api/email/status",
+            "GET",
+            "email/status",
+            200,
+            description="Should return configured:false since RESEND_API_KEY is empty"
+        )
+        if success:
+            configured = response.get('configured')
+            provider = response.get('provider')
+            sender = response.get('sender')
+            
+            if configured == False and provider == 'resend':
+                self.log(f"✅ Email status correct: configured={configured}, provider={provider}, sender={sender}", "PASS")
+            else:
+                self.log(f"❌ Email status incorrect: configured={configured}, provider={provider}", "FAIL")
+    
+    def test_email_send_not_configured(self):
+        """Test POST /api/email/send with RESEND_API_KEY unset"""
+        success, response = self.run_test(
+            "Email: Send email when not configured",
+            "POST",
+            "email/send",
+            200,
+            data={
+                "to": "test@example.com",
+                "subject": "Test Email",
+                "html": "<p>Test</p>"
+            },
+            description="Should return ok:false, status:'not_configured' without raising 500"
+        )
+        if success:
+            ok = response.get('ok')
+            status = response.get('status')
+            
+            if ok == False and status == 'not_configured':
+                self.log(f"✅ Email send gracefully handled: ok={ok}, status={status}", "PASS")
+            else:
+                self.log(f"❌ Email send response incorrect: ok={ok}, status={status}", "FAIL")
+    
+    def test_pdf_with_currency(self):
+        """Test PDF generation uses document currency"""
+        # Create a client
+        success, client = self.run_test(
+            "PDF currency: Create test client",
+            "POST",
+            "clients",
+            200,
+            data={"name": "PDF Currency Client"}
+        )
+        if not success:
+            return
+        
+        client_id = client.get('id')
+        
+        # Create invoice with GBP currency
+        success, invoice = self.run_test(
+            "PDF currency: Create invoice with GBP",
+            "POST",
+            "invoices",
+            200,
+            data={
+                "client_id": client_id,
+                "title": "GBP Invoice",
+                "items": [{"description": "Test item", "quantity": 1, "rate": 100}],
+                "currency": "GBP"
+            }
+        )
+        if not success:
+            return
+        
+        inv_id = invoice.get('id')
+        
+        # Test PDF generation
+        url = f"{self.base_url}/invoices/{inv_id}/pdf?token={self.token}"
+        try:
+            response = requests.get(url, timeout=10)
+            if response.status_code == 200:
+                content_type = response.headers.get('Content-Type', '')
+                content = response.content
+                
+                if 'application/pdf' in content_type and content.startswith(b'%PDF'):
+                    self.tests_run += 1
+                    self.tests_passed += 1
+                    self.log(f"✅ PDF generated with correct content type and PDF header", "PASS")
+                else:
+                    self.tests_run += 1
+                    self.tests_failed += 1
+                    self.log(f"❌ PDF generation failed: wrong content type or format", "FAIL")
+            else:
+                self.tests_run += 1
+                self.tests_failed += 1
+                self.log(f"❌ PDF generation failed: status {response.status_code}", "FAIL")
+        except Exception as e:
+            self.tests_run += 1
+            self.tests_failed += 1
+            self.log(f"❌ PDF generation error: {str(e)}", "FAIL")
+    
+    # ==================== END PHASE 4 TESTS ====================
+
     def run_all_tests(self):
         """Run all backend tests"""
         self.log("\n" + "="*80)
@@ -1142,6 +1672,32 @@ class LancelyAPITester:
         self.log("\n\n🔒 AUTHORIZATION TESTS")
         self.log("-" * 80)
         self.test_authorization()
+        
+        # ===== PHASE 4 TESTS =====
+        self.log("\n\n🚀 PHASE 4 FEATURE TESTS")
+        self.log("-" * 80)
+        
+        self.log("\n💱 CURRENCIES & MULTI-CURRENCY")
+        self.test_currencies_endpoint()
+        self.test_user_defaults_currency_theme()
+        self.test_update_user_currency_theme()
+        self.test_invoice_with_currency()
+        self.test_quotation_currency_preservation()
+        
+        self.log("\n📊 CSV EXPORTS")
+        self.test_csv_exports()
+        
+        self.log("\n🔄 RECURRING INVOICES")
+        self.test_recurring_invoices_crud()
+        self.test_recurring_generate()
+        self.test_recurring_run_due()
+        
+        self.log("\n📧 EMAIL SERVICE")
+        self.test_email_status()
+        self.test_email_send_not_configured()
+        
+        self.log("\n📄 PDF WITH CURRENCY")
+        self.test_pdf_with_currency()
         
         # Summary
         self.log("\n\n" + "="*80)

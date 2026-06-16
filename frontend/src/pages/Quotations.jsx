@@ -6,11 +6,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { api, formatAED, formatDate, pdfUrl } from '@/lib/api';
+import { api, formatMoney, formatDate, pdfUrl } from '@/lib/api';
 import { toast } from 'sonner';
 import { EmptyState } from '@/components/EmptyState';
 import { Skeleton } from '@/components/ui/skeleton';
 import { StatusBadge } from '@/components/StatusBadge';
+import { ExportButton } from '@/components/ExportButton';
 
 export default function Quotations() {
   const navigate = useNavigate();
@@ -56,6 +57,7 @@ export default function Quotations() {
         </div>
         <div className="flex items-center gap-2">
           <Input placeholder="Search quotations..." value={q} onChange={(e) => setQ(e.target.value)} className="bg-background/40 w-full sm:w-64" data-testid="quotations-search-input" />
+          <ExportButton entity="quotations" testid="quotations-export-button" />
           <Button onClick={() => navigate('/quotations/new')} className="bg-primary text-primary-foreground hover:bg-primary/90" data-testid="quotations-add-button"><Plus className="h-4 w-4 mr-1.5" /> New Quotation</Button>
         </div>
       </div>
@@ -82,13 +84,13 @@ export default function Quotations() {
                 {filtered.map(item => (
                   <TableRow key={item.id} className="hover:bg-muted/30 transition-colors cursor-pointer" onClick={() => navigate(`/quotations/${item.id}`)}>
                     <TableCell>
-                      <div className="font-medium">{item.number}</div>
+                      <div className="flex items-center gap-2 font-medium">{item.number}<span className="text-[10px] uppercase text-muted-foreground border border-border rounded-full px-1.5 py-0.5">{item.currency || 'AED'}</span></div>
                       <div className="text-xs text-muted-foreground">{item.title || 'Quotation'}</div>
                     </TableCell>
                     <TableCell className="hidden md:table-cell text-sm">{clients[item.client_id]?.name || '-'}</TableCell>
                     <TableCell className="hidden md:table-cell text-sm text-muted-foreground">{formatDate(item.issue_date)}</TableCell>
                     <TableCell><StatusBadge status={item.status || 'draft'} /></TableCell>
-                    <TableCell className="text-right tabular-nums font-medium">{formatAED(item.total)}</TableCell>
+                    <TableCell className="text-right tabular-nums font-medium">{formatMoney(item.total, item.currency)}</TableCell>
                     <TableCell onClick={(e) => e.stopPropagation()}>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>

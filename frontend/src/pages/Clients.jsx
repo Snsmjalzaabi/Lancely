@@ -13,6 +13,7 @@ import { api } from '@/lib/api';
 import { toast } from 'sonner';
 import { EmptyState } from '@/components/EmptyState';
 import { Skeleton } from '@/components/ui/skeleton';
+import { ExportButton } from '@/components/ExportButton';
 
 const empty = { name: '', company: '', email: '', phone: '', address: '', trn: '', notes: '' };
 
@@ -83,6 +84,7 @@ export default function Clients() {
         </div>
         <div className="flex items-center gap-2">
           <Input placeholder="Search clients..." value={q} onChange={(e) => setQ(e.target.value)} className="bg-background/40 w-full sm:w-64" data-testid="clients-search-input" />
+          <ExportButton entity="clients" testid="clients-export-button" />
           <Button onClick={openCreate} className="bg-primary text-primary-foreground hover:bg-primary/90" data-testid="clients-add-button"><Plus className="h-4 w-4 mr-1.5" /> Add Client</Button>
         </div>
       </div>

@@ -9,15 +9,19 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogD
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { api, formatAED, formatDate } from '@/lib/api';
+import { api, formatMoney, formatDate } from '@/lib/api';
 import { toast } from 'sonner';
 import { EmptyState } from '@/components/EmptyState';
 import { Skeleton } from '@/components/ui/skeleton';
 import { StatusBadge } from '@/components/StatusBadge';
+import { ExportButton } from '@/components/ExportButton';
+import { useAuth } from '@/contexts/AuthContext';
 
 const empty = { name: '', client_id: '', status: 'active', deadline: '', value: 0, notes: '' };
 
 export default function Projects() {
+  const { user } = useAuth();
+  const currency = user?.currency || 'AED';
   const [list, setList] = useState([]);
   const [clients, setClients] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -84,7 +88,10 @@ export default function Projects() {
           <h2 className="font-display text-xl sm:text-2xl font-semibold tracking-tight">Projects</h2>
           <p className="text-sm text-muted-foreground">Track engagements, deadlines, and project value.</p>
         </div>
-        <Button onClick={openCreate} className="bg-primary text-primary-foreground hover:bg-primary/90" data-testid="projects-add-button"><Plus className="h-4 w-4 mr-1.5" /> New Project</Button>
+        <div className="flex items-center gap-2">
+          <ExportButton entity="projects" testid="projects-export-button" />
+          <Button onClick={openCreate} className="bg-primary text-primary-foreground hover:bg-primary/90" data-testid="projects-add-button"><Plus className="h-4 w-4 mr-1.5" /> New Project</Button>
+        </div>
       </div>
 
       <Card className="rounded-2xl border border-border bg-card overflow-hidden [box-shadow:var(--shadow-elev-1)]">
@@ -115,7 +122,7 @@ export default function Projects() {
                     <TableCell className="hidden md:table-cell text-sm">{clientMap[p.client_id]?.name || '—'}</TableCell>
                     <TableCell><StatusBadge status={p.status} /></TableCell>
                     <TableCell className={`hidden md:table-cell text-sm flex items-center gap-1.5 ${deadlineTone(p.deadline, p.status)}`}><CalendarDays className="h-3.5 w-3.5" /> {formatDate(p.deadline)}</TableCell>
-                    <TableCell className="text-right tabular-nums">{formatAED(p.value || 0)}</TableCell>
+                    <TableCell className="text-right tabular-nums">{formatMoney(p.value || 0, currency)}</TableCell>
                     <TableCell>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -172,7 +179,7 @@ export default function Projects() {
               <Input type="date" value={form.deadline || ''} onChange={(e) => setForm({ ...form, deadline: e.target.value })} className="bg-background/40" data-testid="project-form-deadline" />
             </div>
             <div className="space-y-1.5">
-              <Label>Value (AED)</Label>
+              <Label>Value ({currency})</Label>
               <Input type="number" min="0" step="0.01" value={form.value} onChange={(e) => setForm({ ...form, value: e.target.value })} className="bg-background/40 tabular-nums" data-testid="project-form-value" />
             </div>
             <div className="space-y-1.5 sm:col-span-2">

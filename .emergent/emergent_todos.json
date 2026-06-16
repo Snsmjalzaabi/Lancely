@@ -1,38 +1,50 @@
 [
   {
-    "content": "Phase 2: Get design guidelines from design_agent",
+    "content": "Phase 4: Install resend package; update .env placeholders",
     "status": "completed"
   },
   {
-    "content": "Phase 2: Install backend dependencies (reportlab)",
+    "content": "Phase 4: Backend - currency support on users, invoices, quotations + currencies endpoint",
     "status": "completed"
   },
   {
-    "content": "Phase 2: Install frontend dependencies (already present)",
+    "content": "Phase 4: Backend - CSV export endpoints for clients/invoices/quotations/projects",
     "status": "completed"
   },
   {
-    "content": "Phase 2: Build backend - models, auth, CRUD endpoints, VAT calc, PDF gen, analytics",
+    "content": "Phase 4: Backend - Recurring invoices CRUD + generate next + auto-run on access",
     "status": "completed"
   },
   {
-    "content": "Phase 2: Build frontend - dark SaaS shell, auth pages, dashboard, clients, quotations, invoices, projects, payments, settings",
+    "content": "Phase 4: Backend - Email send endpoint (Resend with graceful 'not configured' fallback)",
     "status": "completed"
   },
   {
-    "content": "Phase 2: All user stories covered in development",
+    "content": "Phase 4: Backend - Update PDF generator to be currency-aware",
     "status": "completed"
   },
   {
-    "content": "Phase 3: End-to-End testing with testing_agent_v3",
+    "content": "Phase 4: Frontend - Light/dark theme toggle with localStorage persistence",
     "status": "completed"
   },
   {
-    "content": "Phase 3: Manual smoke test of 10 critical flows",
+    "content": "Phase 4: Frontend - Currency formatter + Settings currency selector + per-doc currency in editor",
     "status": "completed"
   },
   {
-    "content": "Phase 3: Fix all bugs found by testing agent (register ObjectId bug fixed)",
+    "content": "Phase 4: Frontend - CSV export buttons on each list page",
     "status": "completed"
+  },
+  {
+    "content": "Phase 4: Frontend - Recurring Invoices page + sidebar nav",
+    "status": "completed"
+  },
+  {
+    "content": "Phase 4: Frontend - Send Email modal from invoice editor",
+    "status": "completed"
+  },
+  {
+    "content": "Phase 4: End-to-end testing with testing_agent_v3",
+    "status": "in_progress"
   }
 ]

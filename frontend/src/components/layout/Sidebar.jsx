@@ -1,5 +1,5 @@
 import { NavLink, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Users, FileText, Receipt, FolderKanban, BellRing, Settings as SettingsIcon, LogOut, Sparkles } from 'lucide-react';
+import { LayoutDashboard, Users, FileText, Receipt, FolderKanban, BellRing, Settings as SettingsIcon, LogOut, Sparkles, Repeat } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
@@ -18,6 +18,7 @@ const groups = [
     items: [
       { to: '/quotations', icon: FileText, label: 'Quotations', testid: 'sidebar-nav-quotations' },
       { to: '/invoices', icon: Receipt, label: 'Invoices', testid: 'sidebar-nav-invoices' },
+      { to: '/recurring', icon: Repeat, label: 'Recurring', testid: 'sidebar-nav-recurring' },
       { to: '/payments', icon: BellRing, label: 'Payments', testid: 'sidebar-nav-payments' },
     ],
   },
@@ -108,11 +109,9 @@ export default function Sidebar({ mobileOpen, setMobileOpen }) {
 
   return (
     <>
-      {/* Desktop */}
       <aside className="hidden lg:flex fixed inset-y-0 left-0 w-[260px] border-r border-border bg-card/60 backdrop-blur-sm z-30">
         {SidebarBody}
       </aside>
-      {/* Mobile */}
       <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
         <SheetContent side="left" className="p-0 w-[280px] bg-card border-border">
           {SidebarBody}

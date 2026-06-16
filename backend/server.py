@@ -4,6 +4,9 @@ from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 import os
+import csv
+import io
+import asyncio
 import logging
 from pathlib import Path
 from datetime import datetime, timezone, timedelta, date
@@ -11,6 +14,7 @@ from typing import List, Optional
 import uuid
 import bcrypt
 import jwt
+import resend
 from pydantic import BaseModel, Field, EmailStr, ConfigDict
 from collections import defaultdict
 
@@ -26,6 +30,22 @@ db = client[os.environ['DB_NAME']]
 JWT_SECRET = os.environ.get('JWT_SECRET', 'lancely-dev-secret-change-in-prod-please')
 JWT_ALGORITHM = 'HS256'
 JWT_EXPIRATION_HOURS = 24 * 7
+
+RESEND_API_KEY = os.environ.get('RESEND_API_KEY', '').strip()
+SENDER_EMAIL = os.environ.get('SENDER_EMAIL', 'onboarding@resend.dev').strip()
+if RESEND_API_KEY:
+    resend.api_key = RESEND_API_KEY
+
+# Supported currencies
+CURRENCIES = [
+    {"code": "AED", "symbol": "د.إ", "name": "UAE Dirham", "locale": "en-AE"},
+    {"code": "USD", "symbol": "$", "name": "US Dollar", "locale": "en-US"},
+    {"code": "EUR", "symbol": "€", "name": "Euro", "locale": "en-GB"},
+    {"code": "GBP", "symbol": "£", "name": "British Pound", "locale": "en-GB"},
+    {"code": "SAR", "symbol": "﷼", "name": "Saudi Riyal", "locale": "en-SA"},
+    {"code": "INR", "symbol": "₹", "name": "Indian Rupee", "locale": "en-IN"},
+]
+CURRENCY_CODES = {c["code"] for c in CURRENCIES}
 
 app = FastAPI(title="Lancely API")
 api_router = APIRouter(prefix="/api")
@@ -137,6 +157,8 @@ class UserUpdate(BaseModel):
     address: Optional[str] = None
     phone: Optional[str] = None
     website: Optional[str] = None
+    currency: Optional[str] = None
+    theme: Optional[str] = None
 
 class ClientIn(BaseModel):
     name: str
@@ -161,6 +183,7 @@ class QuotationIn(BaseModel):
     notes: Optional[str] = None
     status: Optional[str] = "draft"  # draft|sent|accepted|rejected
     items: List[LineItem] = []
+    currency: Optional[str] = None
 
 class InvoiceIn(BaseModel):
     client_id: str
@@ -171,6 +194,7 @@ class InvoiceIn(BaseModel):
     status: Optional[str] = "unpaid"  # unpaid|paid|overdue
     items: List[LineItem] = []
     project_id: Optional[str] = None
+    currency: Optional[str] = None
 
 class InvoiceStatusUpdate(BaseModel):
     status: str
@@ -201,6 +225,8 @@ async def register(data: UserRegister):
         "address": "",
         "phone": "",
         "website": "",
+        "currency": "AED",
+        "theme": "dark",
         "password_hash": hash_password(data.password),
         "created_at": now_utc().isoformat(),
     }
@@ -226,6 +252,10 @@ async def get_me(current_user: dict = Depends(get_current_user)):
 @api_router.put("/auth/me")
 async def update_me(data: UserUpdate, current_user: dict = Depends(get_current_user)):
     updates = {k: v for k, v in data.model_dump(exclude_unset=True).items() if v is not None}
+    if 'currency' in updates and updates['currency'] not in CURRENCY_CODES:
+        raise HTTPException(status_code=400, detail="Unsupported currency")
+    if 'theme' in updates and updates['theme'] not in ('light', 'dark'):
+        raise HTTPException(status_code=400, detail="Invalid theme")
     if updates:
         await db.users.update_one({"id": current_user["id"]}, {"$set": updates})
     user = await db.users.find_one({"id": current_user["id"]}, {"_id": 0, "password_hash": 0})
@@ -289,6 +319,9 @@ async def create_quotation(data: QuotationIn, current_user: dict = Depends(get_c
     totals = compute_totals(items)
     count = await db.quotations.count_documents({"user_id": current_user["id"]})
     number = f"QTN-{str(count + 1).zfill(4)}"
+    currency = (data.currency or current_user.get('currency') or 'AED').upper()
+    if currency not in CURRENCY_CODES:
+        currency = 'AED'
     doc = {
         "id": new_id(),
         "user_id": current_user["id"],
@@ -304,6 +337,7 @@ async def create_quotation(data: QuotationIn, current_user: dict = Depends(get_c
         "vat": totals["vat"],
         "total": totals["total"],
         "vat_rate": totals["vat_rate"],
+        "currency": currency,
         "created_at": now_utc().isoformat(),
         "converted_invoice_id": None,
     }
@@ -344,6 +378,10 @@ async def update_quotation(qid: str, data: QuotationIn, current_user: dict = Dep
         "total": totals["total"],
         "vat_rate": totals["vat_rate"],
     }
+    if data.currency:
+        cc = data.currency.upper()
+        if cc in CURRENCY_CODES:
+            updates["currency"] = cc
     await db.quotations.update_one({"id": qid}, {"$set": updates})
     doc = await db.quotations.find_one({"id": qid}, {"_id": 0})
     return serialize_doc(doc)
@@ -384,6 +422,7 @@ async def convert_quotation_to_invoice(qid: str, current_user: dict = Depends(ge
         "vat": q.get("vat", 0),
         "total": q.get("total", 0),
         "vat_rate": q.get("vat_rate", VAT_RATE),
+        "currency": q.get("currency", "AED"),
         "payment_date": None,
         "created_at": now_utc().isoformat(),
         "project_id": None,
@@ -417,6 +456,9 @@ async def create_invoice(data: InvoiceIn, current_user: dict = Depends(get_curre
     totals = compute_totals(items)
     count = await db.invoices.count_documents({"user_id": current_user["id"]})
     number = f"INV-{str(count + 1).zfill(4)}"
+    currency = (data.currency or current_user.get('currency') or 'AED').upper()
+    if currency not in CURRENCY_CODES:
+        currency = 'AED'
     doc = {
         "id": new_id(),
         "user_id": current_user["id"],
@@ -432,6 +474,7 @@ async def create_invoice(data: InvoiceIn, current_user: dict = Depends(get_curre
         "vat": totals["vat"],
         "total": totals["total"],
         "vat_rate": totals["vat_rate"],
+        "currency": currency,
         "payment_date": None,
         "created_at": now_utc().isoformat(),
         "project_id": data.project_id,
@@ -480,6 +523,10 @@ async def update_invoice(inv_id: str, data: InvoiceIn, current_user: dict = Depe
         "vat_rate": totals["vat_rate"],
         "project_id": data.project_id,
     }
+    if data.currency:
+        cc = data.currency.upper()
+        if cc in CURRENCY_CODES:
+            updates["currency"] = cc
     await db.invoices.update_one({"id": inv_id}, {"$set": updates})
     doc = await db.invoices.find_one({"id": inv_id}, {"_id": 0})
     return serialize_doc(doc)
@@ -689,6 +736,364 @@ async def quotation_pdf(qid: str, token: Optional[str] = None):
     return Response(content=pdf_bytes, media_type="application/pdf", headers={
         "Content-Disposition": f"attachment; filename={q.get('number','quotation')}.pdf"
     })
+
+# -----------------------
+# Currencies
+# -----------------------
+@api_router.get("/currencies")
+async def list_currencies():
+    return CURRENCIES
+
+# -----------------------
+# CSV Exports
+# -----------------------
+def _csv_response(rows: List[dict], headers: List[str], filename: str) -> Response:
+    buf = io.StringIO()
+    writer = csv.DictWriter(buf, fieldnames=headers, extrasaction='ignore')
+    writer.writeheader()
+    for r in rows:
+        writer.writerow(r)
+    return Response(
+        content=buf.getvalue(),
+        media_type='text/csv; charset=utf-8',
+        headers={"Content-Disposition": f"attachment; filename={filename}"},
+    )
+
+async def _resolve_user_from_token(token: Optional[str]) -> dict:
+    user_id = decode_token(token) if token else None
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Auth token required")
+    user = await db.users.find_one({"id": user_id}, {"_id": 0, "password_hash": 0})
+    if not user:
+        raise HTTPException(status_code=401, detail="User not found")
+    return serialize_doc(user)
+
+@api_router.get("/export/clients.csv")
+async def export_clients_csv(token: Optional[str] = None):
+    user = await _resolve_user_from_token(token)
+    rows = await db.clients.find({"user_id": user["id"]}, {"_id": 0}).to_list(5000)
+    rows = [serialize_doc(r) for r in rows]
+    headers = ["name", "company", "email", "phone", "address", "trn", "notes", "created_at"]
+    return _csv_response(rows, headers, "lancely-clients.csv")
+
+@api_router.get("/export/invoices.csv")
+async def export_invoices_csv(token: Optional[str] = None):
+    user = await _resolve_user_from_token(token)
+    invs = await db.invoices.find({"user_id": user["id"]}, {"_id": 0}).to_list(10000)
+    invs = [serialize_doc(i) for i in invs]
+    cli_map = {c["id"]: c for c in await db.clients.find({"user_id": user["id"]}, {"_id": 0}).to_list(10000)}
+    rows = []
+    for i in invs:
+        c = cli_map.get(i.get("client_id")) or {}
+        rows.append({
+            "number": i.get("number"),
+            "title": i.get("title"),
+            "client_name": c.get("name"),
+            "client_company": c.get("company"),
+            "client_trn": c.get("trn"),
+            "issue_date": i.get("issue_date"),
+            "due_date": i.get("due_date"),
+            "status": i.get("status"),
+            "currency": i.get("currency", "AED"),
+            "subtotal": i.get("subtotal"),
+            "vat": i.get("vat"),
+            "total": i.get("total"),
+            "payment_date": i.get("payment_date"),
+        })
+    headers = ["number","title","client_name","client_company","client_trn","issue_date","due_date","status","currency","subtotal","vat","total","payment_date"]
+    return _csv_response(rows, headers, "lancely-invoices.csv")
+
+@api_router.get("/export/quotations.csv")
+async def export_quotations_csv(token: Optional[str] = None):
+    user = await _resolve_user_from_token(token)
+    qts = await db.quotations.find({"user_id": user["id"]}, {"_id": 0}).to_list(10000)
+    qts = [serialize_doc(i) for i in qts]
+    cli_map = {c["id"]: c for c in await db.clients.find({"user_id": user["id"]}, {"_id": 0}).to_list(10000)}
+    rows = []
+    for i in qts:
+        c = cli_map.get(i.get("client_id")) or {}
+        rows.append({
+            "number": i.get("number"),
+            "title": i.get("title"),
+            "client_name": c.get("name"),
+            "issue_date": i.get("issue_date"),
+            "valid_until": i.get("valid_until"),
+            "status": i.get("status"),
+            "currency": i.get("currency", "AED"),
+            "subtotal": i.get("subtotal"),
+            "vat": i.get("vat"),
+            "total": i.get("total"),
+        })
+    headers = ["number","title","client_name","issue_date","valid_until","status","currency","subtotal","vat","total"]
+    return _csv_response(rows, headers, "lancely-quotations.csv")
+
+@api_router.get("/export/projects.csv")
+async def export_projects_csv(token: Optional[str] = None):
+    user = await _resolve_user_from_token(token)
+    prs = await db.projects.find({"user_id": user["id"]}, {"_id": 0}).to_list(10000)
+    prs = [serialize_doc(i) for i in prs]
+    cli_map = {c["id"]: c for c in await db.clients.find({"user_id": user["id"]}, {"_id": 0}).to_list(10000)}
+    rows = []
+    for p in prs:
+        c = cli_map.get(p.get("client_id")) or {}
+        rows.append({
+            "name": p.get("name"),
+            "client_name": c.get("name"),
+            "status": p.get("status"),
+            "deadline": p.get("deadline"),
+            "value": p.get("value"),
+            "notes": p.get("notes"),
+        })
+    headers = ["name","client_name","status","deadline","value","notes"]
+    return _csv_response(rows, headers, "lancely-projects.csv")
+
+# -----------------------
+# Recurring Invoices
+# -----------------------
+FREQUENCIES = {"weekly": 7, "monthly": 30, "quarterly": 91, "yearly": 365}
+
+class RecurringIn(BaseModel):
+    client_id: str
+    title: Optional[str] = None
+    notes: Optional[str] = None
+    frequency: str = "monthly"  # weekly|monthly|quarterly|yearly
+    next_run_date: Optional[str] = None  # ISO date; default today
+    is_active: Optional[bool] = True
+    currency: Optional[str] = None
+    items: List[LineItem] = []
+    due_days: Optional[int] = 14
+
+def _advance_date(d: str, frequency: str) -> str:
+    base = datetime.fromisoformat(d).date() if d else now_utc().date()
+    if frequency == "monthly":
+        month = base.month + 1
+        year = base.year + (month - 1) // 12
+        month = ((month - 1) % 12) + 1
+        try:
+            return date(year, month, base.day).isoformat()
+        except ValueError:
+            # Handle Feb 30 etc.
+            import calendar
+            last_day = calendar.monthrange(year, month)[1]
+            return date(year, month, last_day).isoformat()
+    if frequency == "quarterly":
+        month = base.month + 3
+        year = base.year + (month - 1) // 12
+        month = ((month - 1) % 12) + 1
+        try:
+            return date(year, month, base.day).isoformat()
+        except ValueError:
+            import calendar
+            last_day = calendar.monthrange(year, month)[1]
+            return date(year, month, last_day).isoformat()
+    if frequency == "yearly":
+        try:
+            return date(base.year + 1, base.month, base.day).isoformat()
+        except ValueError:
+            return date(base.year + 1, base.month, 28).isoformat()
+    # weekly default
+    return (base + timedelta(days=FREQUENCIES.get(frequency, 7))).isoformat()
+
+@api_router.post("/recurring-invoices")
+async def create_recurring(data: RecurringIn, current_user: dict = Depends(get_current_user)):
+    if data.frequency not in FREQUENCIES:
+        raise HTTPException(status_code=400, detail="Invalid frequency")
+    c = await db.clients.find_one({"id": data.client_id, "user_id": current_user["id"]})
+    if not c:
+        raise HTTPException(status_code=400, detail="Invalid client_id")
+    items = [i.model_dump() for i in data.items]
+    for it in items:
+        it["amount"] = round(float(it.get('quantity', 0) or 0) * float(it.get('rate', 0) or 0), 2)
+    currency = (data.currency or current_user.get('currency') or 'AED').upper()
+    if currency not in CURRENCY_CODES:
+        currency = 'AED'
+    doc = {
+        "id": new_id(),
+        "user_id": current_user["id"],
+        "client_id": data.client_id,
+        "title": data.title or "Recurring Invoice",
+        "notes": data.notes,
+        "frequency": data.frequency,
+        "next_run_date": data.next_run_date or now_utc().date().isoformat(),
+        "is_active": True if data.is_active is None else bool(data.is_active),
+        "currency": currency,
+        "items": items,
+        "due_days": int(data.due_days or 14),
+        "last_generated_at": None,
+        "generated_count": 0,
+        "created_at": now_utc().isoformat(),
+    }
+    await db.recurring_invoices.insert_one(doc)
+    return serialize_doc(doc)
+
+@api_router.get("/recurring-invoices")
+async def list_recurring(current_user: dict = Depends(get_current_user)):
+    items = await db.recurring_invoices.find({"user_id": current_user["id"]}, {"_id": 0}).sort("created_at", -1).to_list(500)
+    return [serialize_doc(x) for x in items]
+
+@api_router.get("/recurring-invoices/{rid}")
+async def get_recurring(rid: str, current_user: dict = Depends(get_current_user)):
+    d = await db.recurring_invoices.find_one({"id": rid, "user_id": current_user["id"]}, {"_id": 0})
+    if not d:
+        raise HTTPException(status_code=404, detail="Not found")
+    return serialize_doc(d)
+
+@api_router.put("/recurring-invoices/{rid}")
+async def update_recurring(rid: str, data: RecurringIn, current_user: dict = Depends(get_current_user)):
+    existing = await db.recurring_invoices.find_one({"id": rid, "user_id": current_user["id"]})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Not found")
+    if data.frequency not in FREQUENCIES:
+        raise HTTPException(status_code=400, detail="Invalid frequency")
+    items = [i.model_dump() for i in data.items]
+    for it in items:
+        it["amount"] = round(float(it.get('quantity', 0) or 0) * float(it.get('rate', 0) or 0), 2)
+    updates = {
+        "client_id": data.client_id,
+        "title": data.title or existing.get("title", "Recurring Invoice"),
+        "notes": data.notes,
+        "frequency": data.frequency,
+        "next_run_date": data.next_run_date or existing.get("next_run_date"),
+        "is_active": True if data.is_active is None else bool(data.is_active),
+        "items": items,
+        "due_days": int(data.due_days or existing.get("due_days", 14)),
+    }
+    if data.currency:
+        cc = data.currency.upper()
+        if cc in CURRENCY_CODES:
+            updates["currency"] = cc
+    await db.recurring_invoices.update_one({"id": rid}, {"$set": updates})
+    d = await db.recurring_invoices.find_one({"id": rid}, {"_id": 0})
+    return serialize_doc(d)
+
+@api_router.delete("/recurring-invoices/{rid}")
+async def delete_recurring(rid: str, current_user: dict = Depends(get_current_user)):
+    res = await db.recurring_invoices.delete_one({"id": rid, "user_id": current_user["id"]})
+    if res.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Not found")
+    return {"ok": True}
+
+async def _generate_invoice_from_recurring(rec: dict) -> dict:
+    """Internal: generate one invoice instance and advance next_run_date."""
+    items = rec.get("items", [])
+    totals = compute_totals(items)
+    count = await db.invoices.count_documents({"user_id": rec["user_id"]})
+    number = f"INV-{str(count + 1).zfill(4)}"
+    issue = now_utc().date().isoformat()
+    due = (now_utc() + timedelta(days=int(rec.get("due_days", 14)))).date().isoformat()
+    inv = {
+        "id": new_id(),
+        "user_id": rec["user_id"],
+        "number": number,
+        "client_id": rec["client_id"],
+        "title": rec.get("title", "Invoice"),
+        "issue_date": issue,
+        "due_date": due,
+        "notes": rec.get("notes"),
+        "status": "unpaid",
+        "items": items,
+        "subtotal": totals["subtotal"],
+        "vat": totals["vat"],
+        "total": totals["total"],
+        "vat_rate": totals["vat_rate"],
+        "currency": rec.get("currency", "AED"),
+        "payment_date": None,
+        "created_at": now_utc().isoformat(),
+        "project_id": None,
+        "from_recurring_id": rec["id"],
+    }
+    await db.invoices.insert_one(inv)
+    new_next = _advance_date(rec.get("next_run_date") or now_utc().date().isoformat(), rec.get("frequency", "monthly"))
+    await db.recurring_invoices.update_one({"id": rec["id"]}, {"$set": {
+        "next_run_date": new_next,
+        "last_generated_at": now_utc().isoformat(),
+        "generated_count": rec.get("generated_count", 0) + 1,
+    }})
+    return serialize_doc(inv)
+
+@api_router.post("/recurring-invoices/{rid}/generate")
+async def generate_recurring_now(rid: str, current_user: dict = Depends(get_current_user)):
+    rec = await db.recurring_invoices.find_one({"id": rid, "user_id": current_user["id"]}, {"_id": 0})
+    if not rec:
+        raise HTTPException(status_code=404, detail="Not found")
+    inv = await _generate_invoice_from_recurring(rec)
+    return inv
+
+@api_router.post("/recurring-invoices/run-due")
+async def run_due_recurring(current_user: dict = Depends(get_current_user)):
+    """Generate invoices for all active recurring templates whose next_run_date <= today."""
+    today = now_utc().date().isoformat()
+    recs = await db.recurring_invoices.find({"user_id": current_user["id"], "is_active": True}, {"_id": 0}).to_list(500)
+    generated = []
+    for rec in recs:
+        # Generate until next_run_date is in the future
+        guard = 0
+        while rec.get("next_run_date") and rec["next_run_date"] <= today and guard < 24:
+            inv = await _generate_invoice_from_recurring(rec)
+            generated.append(inv["id"])
+            rec = await db.recurring_invoices.find_one({"id": rec["id"]}, {"_id": 0})
+            guard += 1
+    return {"generated": generated, "count": len(generated)}
+
+# -----------------------
+# Email Reminders (Resend)
+# -----------------------
+class EmailSendIn(BaseModel):
+    to: EmailStr
+    subject: str
+    html: str
+    invoice_id: Optional[str] = None
+    cc: Optional[List[EmailStr]] = None
+
+@api_router.get("/email/status")
+async def email_status(current_user: dict = Depends(get_current_user)):
+    return {
+        "configured": bool(RESEND_API_KEY),
+        "sender": SENDER_EMAIL,
+        "provider": "resend",
+        "note": ("Email sending is active." if RESEND_API_KEY else
+                 "Email sending is NOT configured. Add RESEND_API_KEY to backend .env to enable real sending. The compose UI will still generate a preview."),
+    }
+
+@api_router.post("/email/send")
+async def send_email(data: EmailSendIn, current_user: dict = Depends(get_current_user)):
+    log_doc = {
+        "id": new_id(),
+        "user_id": current_user["id"],
+        "to": str(data.to),
+        "subject": data.subject,
+        "html": data.html,
+        "invoice_id": data.invoice_id,
+        "status": "pending",
+        "provider_id": None,
+        "error": None,
+        "created_at": now_utc().isoformat(),
+    }
+    if not RESEND_API_KEY:
+        log_doc["status"] = "not_configured"
+        await db.email_logs.insert_one(log_doc)
+        return {"ok": False, "status": "not_configured", "message": "Email service not configured. Add RESEND_API_KEY to backend .env to enable real sending."}
+    try:
+        params = {
+            "from": SENDER_EMAIL,
+            "to": [str(data.to)],
+            "subject": data.subject,
+            "html": data.html,
+        }
+        if data.cc:
+            params["cc"] = [str(x) for x in data.cc]
+        result = await asyncio.to_thread(resend.Emails.send, params)
+        log_doc["status"] = "sent"
+        log_doc["provider_id"] = result.get("id") if isinstance(result, dict) else None
+        await db.email_logs.insert_one(log_doc)
+        return {"ok": True, "status": "sent", "provider_id": log_doc["provider_id"]}
+    except Exception as e:
+        err = str(e)
+        log_doc["status"] = "failed"
+        log_doc["error"] = err
+        await db.email_logs.insert_one(log_doc)
+        logger.error("Email send failed: %s", err)
+        raise HTTPException(status_code=502, detail=f"Email send failed: {err}")
 
 # -----------------------
 # Root

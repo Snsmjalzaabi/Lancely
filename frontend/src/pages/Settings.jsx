@@ -3,16 +3,21 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Save, User, Building2 } from 'lucide-react';
+import { Save, User, Building2, Coins, Palette, Mail } from 'lucide-react';
 import { api } from '@/lib/api';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
+import { useTheme } from '@/contexts/ThemeContext';
 
 export default function Settings() {
   const { user, refreshUser } = useAuth();
-  const [form, setForm] = useState({ name: '', business_name: '', trn: '', address: '', phone: '', website: '' });
+  const { theme, setTheme } = useTheme();
+  const [form, setForm] = useState({ name: '', business_name: '', trn: '', address: '', phone: '', website: '', currency: 'AED' });
   const [saving, setSaving] = useState(false);
+  const [currencies, setCurrencies] = useState([]);
+  const [emailStatus, setEmailStatus] = useState(null);
 
   useEffect(() => {
     if (user) setForm({
@@ -22,8 +27,14 @@ export default function Settings() {
       address: user.address || '',
       phone: user.phone || '',
       website: user.website || '',
+      currency: user.currency || 'AED',
     });
   }, [user]);
+
+  useEffect(() => {
+    api.get('/currencies').then(({ data }) => setCurrencies(data)).catch(() => {});
+    api.get('/email/status').then(({ data }) => setEmailStatus(data)).catch(() => {});
+  }, []);
 
   const save = async (e) => {
     e?.preventDefault();
@@ -33,16 +44,23 @@ export default function Settings() {
     finally { setSaving(false); }
   };
 
+  const changeTheme = async (t) => {
+    setTheme(t);
+    try { await api.put('/auth/me', { theme: t }); } catch {}
+  };
+
   return (
     <div className="space-y-5">
       <div>
         <h2 className="font-display text-xl sm:text-2xl font-semibold tracking-tight">Settings</h2>
-        <p className="text-sm text-muted-foreground">Manage your profile and business info that appears on PDFs.</p>
+        <p className="text-sm text-muted-foreground">Manage your profile, business info, currency, theme and email.</p>
       </div>
       <Tabs defaultValue="profile">
         <TabsList className="bg-card border border-border">
           <TabsTrigger value="profile" data-testid="settings-tab-profile"><User className="h-3.5 w-3.5 mr-1.5" /> Profile</TabsTrigger>
           <TabsTrigger value="business" data-testid="settings-tab-business"><Building2 className="h-3.5 w-3.5 mr-1.5" /> Business</TabsTrigger>
+          <TabsTrigger value="preferences" data-testid="settings-tab-preferences"><Palette className="h-3.5 w-3.5 mr-1.5" /> Preferences</TabsTrigger>
+          <TabsTrigger value="email" data-testid="settings-tab-email"><Mail className="h-3.5 w-3.5 mr-1.5" /> Email</TabsTrigger>
         </TabsList>
         <form onSubmit={save}>
           <TabsContent value="profile" className="mt-4">
@@ -84,6 +102,50 @@ export default function Settings() {
                   <Label>Website</Label>
                   <Input value={form.website} onChange={(e) => setForm({ ...form, website: e.target.value })} className="bg-background/40" placeholder="https://" data-testid="settings-website" />
                 </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+          <TabsContent value="preferences" className="mt-4 space-y-4">
+            <Card className="rounded-2xl border border-border bg-card [box-shadow:var(--shadow-elev-1)]">
+              <CardHeader className="pb-3"><CardTitle className="font-display text-base flex items-center gap-2"><Coins className="h-4 w-4 text-primary" /> Default currency</CardTitle></CardHeader>
+              <CardContent className="max-w-md">
+                <div className="space-y-1.5">
+                  <Label>Used as the default for new invoices and quotations</Label>
+                  <Select value={form.currency} onValueChange={(v) => setForm({ ...form, currency: v })}>
+                    <SelectTrigger className="bg-background/40" data-testid="settings-currency"><SelectValue /></SelectTrigger>
+                    <SelectContent className="bg-card border-border">
+                      {currencies.map(c => <SelectItem key={c.code} value={c.code}>{c.code} — {c.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="rounded-2xl border border-border bg-card [box-shadow:var(--shadow-elev-1)]">
+              <CardHeader className="pb-3"><CardTitle className="font-display text-base flex items-center gap-2"><Palette className="h-4 w-4 text-primary" /> Appearance</CardTitle></CardHeader>
+              <CardContent>
+                <div className="flex items-center gap-3">
+                  <Button type="button" onClick={() => changeTheme('dark')} variant={theme === 'dark' ? 'default' : 'secondary'} className={theme === 'dark' ? 'bg-primary text-primary-foreground' : ''} data-testid="settings-theme-dark">Dark</Button>
+                  <Button type="button" onClick={() => changeTheme('light')} variant={theme === 'light' ? 'default' : 'secondary'} className={theme === 'light' ? 'bg-primary text-primary-foreground' : ''} data-testid="settings-theme-light">Light</Button>
+                  <span className="text-xs text-muted-foreground">Current: {theme}</span>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+          <TabsContent value="email" className="mt-4">
+            <Card className="rounded-2xl border border-border bg-card [box-shadow:var(--shadow-elev-1)]">
+              <CardHeader className="pb-3"><CardTitle className="font-display text-base flex items-center gap-2"><Mail className="h-4 w-4 text-primary" /> Email Service</CardTitle></CardHeader>
+              <CardContent>
+                {emailStatus ? (
+                  <div className="space-y-2 text-sm">
+                    <div className="flex items-center gap-2">
+                      <span className={`inline-flex h-2 w-2 rounded-full ${emailStatus.configured ? 'bg-emerald-400' : 'bg-amber-400'}`} />
+                      <span className="font-medium">{emailStatus.configured ? 'Configured' : 'Not configured'}</span>
+                      <span className="text-muted-foreground">· Provider: {emailStatus.provider}</span>
+                    </div>
+                    <div className="text-xs text-muted-foreground">Sender: <code className="font-mono">{emailStatus.sender}</code></div>
+                    <p className="text-xs text-muted-foreground max-w-2xl">{emailStatus.note}</p>
+                  </div>
+                ) : <div className="text-sm text-muted-foreground">Loading email status...</div>}
               </CardContent>
             </Card>
           </TabsContent>

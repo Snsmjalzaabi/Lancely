@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { BellRing, AlertTriangle, Clock, CheckCircle2, Download, CheckCheck } from 'lucide-react';
-import { api, formatAED, formatDate, pdfUrl } from '@/lib/api';
+import { api, formatMoney, formatDate, pdfUrl } from '@/lib/api';
 import { toast } from 'sonner';
 import { Skeleton } from '@/components/ui/skeleton';
 import { StatusBadge } from '@/components/StatusBadge';
@@ -36,7 +36,7 @@ function Row({ inv, navigate, onPaid }) {
         <div className="text-xs text-muted-foreground">{inv.status === 'paid' ? `Paid ${formatDate(inv.payment_date)}` : `Due ${formatDate(inv.due_date)}`}</div>
       </div>
       <div className="flex items-center gap-2 shrink-0">
-        <span className="text-sm tabular-nums">{formatAED(inv.total)}</span>
+        <span className="text-sm tabular-nums">{formatMoney(inv.total, inv.currency)}</span>
         <StatusBadge status={inv.status} />
         <div className="hidden sm:flex items-center gap-1">
           <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => window.open(pdfUrl('invoices', inv.id), '_blank')} aria-label="Download" data-testid={`payments-pdf-${inv.id}`}><Download className="h-3.5 w-3.5" /></Button>

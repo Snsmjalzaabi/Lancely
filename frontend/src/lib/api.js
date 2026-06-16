@@ -31,14 +31,28 @@ api.interceptors.response.use(
   }
 );
 
-export function formatAED(amount) {
+const LOCALE_MAP = {
+  AED: 'en-AE',
+  USD: 'en-US',
+  EUR: 'en-GB',
+  GBP: 'en-GB',
+  SAR: 'en-SA',
+  INR: 'en-IN',
+};
+
+export function formatMoney(amount, currency = 'AED') {
   const n = Number(amount || 0);
+  const cur = (currency || 'AED').toUpperCase();
+  const locale = LOCALE_MAP[cur] || 'en-US';
   try {
-    return new Intl.NumberFormat('en-AE', { style: 'currency', currency: 'AED', minimumFractionDigits: 2 }).format(n);
+    return new Intl.NumberFormat(locale, { style: 'currency', currency: cur, minimumFractionDigits: 2 }).format(n);
   } catch {
-    return `AED ${n.toFixed(2)}`;
+    return `${cur} ${n.toFixed(2)}`;
   }
 }
+
+// Backwards compatibility alias
+export const formatAED = (a) => formatMoney(a, 'AED');
 
 export function formatDate(d) {
   if (!d) return '-';
@@ -52,4 +66,9 @@ export function formatDate(d) {
 export function pdfUrl(kind, id) {
   const token = localStorage.getItem('lancely_token');
   return `${API_BASE}/${kind}/${id}/pdf?token=${encodeURIComponent(token || '')}`;
+}
+
+export function csvUrl(entity) {
+  const token = localStorage.getItem('lancely_token');
+  return `${API_BASE}/export/${entity}.csv?token=${encodeURIComponent(token || '')}`;
 }

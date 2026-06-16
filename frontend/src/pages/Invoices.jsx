@@ -1,17 +1,18 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Receipt, Plus, MoreHorizontal, Download, Pencil, Trash2, CheckCircle2, Filter } from 'lucide-react';
+import { Receipt, Plus, MoreHorizontal, Download, Pencil, Trash2, CheckCircle2 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { api, formatAED, formatDate, pdfUrl } from '@/lib/api';
+import { api, formatMoney, formatDate, pdfUrl } from '@/lib/api';
 import { toast } from 'sonner';
 import { EmptyState } from '@/components/EmptyState';
 import { Skeleton } from '@/components/ui/skeleton';
 import { StatusBadge } from '@/components/StatusBadge';
+import { ExportButton } from '@/components/ExportButton';
 
 export default function Invoices() {
   const navigate = useNavigate();
@@ -63,6 +64,7 @@ export default function Invoices() {
         </div>
         <div className="flex items-center gap-2">
           <Input placeholder="Search invoices..." value={q} onChange={(e) => setQ(e.target.value)} className="bg-background/40 w-full sm:w-64" data-testid="invoices-search-input" />
+          <ExportButton entity="invoices" testid="invoices-export-button" />
           <Button onClick={() => navigate('/invoices/new')} className="bg-primary text-primary-foreground hover:bg-primary/90" data-testid="invoices-add-button"><Plus className="h-4 w-4 mr-1.5" /> New Invoice</Button>
         </div>
       </div>
@@ -98,13 +100,13 @@ export default function Invoices() {
                 {filtered.map(inv => (
                   <TableRow key={inv.id} className="hover:bg-muted/30 transition-colors cursor-pointer" onClick={() => navigate(`/invoices/${inv.id}`)}>
                     <TableCell>
-                      <div className="font-medium">{inv.number}</div>
+                      <div className="flex items-center gap-2 font-medium">{inv.number}<span className="text-[10px] uppercase text-muted-foreground border border-border rounded-full px-1.5 py-0.5">{inv.currency || 'AED'}</span></div>
                       <div className="text-xs text-muted-foreground">{inv.title || 'Invoice'}</div>
                     </TableCell>
                     <TableCell className="hidden md:table-cell text-sm">{clients[inv.client_id]?.name || '-'}</TableCell>
                     <TableCell className="hidden md:table-cell text-sm text-muted-foreground">{formatDate(inv.due_date)}</TableCell>
                     <TableCell><StatusBadge status={inv.status} /></TableCell>
-                    <TableCell className="text-right tabular-nums font-medium">{formatAED(inv.total)}</TableCell>
+                    <TableCell className="text-right tabular-nums font-medium">{formatMoney(inv.total, inv.currency)}</TableCell>
                     <TableCell onClick={(e) => e.stopPropagation()}>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>

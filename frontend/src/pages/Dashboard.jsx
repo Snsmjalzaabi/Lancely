@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { api, formatAED, formatDate } from '@/lib/api';
+import { api, formatMoney, formatDate } from '@/lib/api';
+import { useAuth } from '@/contexts/AuthContext';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 import { ArrowUpRight, TrendingUp, Wallet, Clock, AlertTriangle, FolderKanban, Users, Receipt, FileText, BellRing } from 'lucide-react';
 import { StatusBadge } from '@/components/StatusBadge';
@@ -33,17 +34,19 @@ function KPICard({ label, value, sub, icon: Icon, tone = 'primary', testid }) {
   );
 }
 
-function CustomTooltip({ active, payload, label }) {
+function CustomTooltip({ active, payload, label, currency }) {
   if (!active || !payload?.length) return null;
   return (
     <div className="rounded-xl border border-border bg-card px-3 py-2 [box-shadow:var(--shadow-elev-1)]">
       <div className="text-[11px] uppercase tracking-wider text-muted-foreground">{label}</div>
-      <div className="font-display text-sm font-semibold mt-0.5">{formatAED(payload[0].value)}</div>
+      <div className="font-display text-sm font-semibold mt-0.5">{formatMoney(payload[0].value, currency)}</div>
     </div>
   );
 }
 
 export default function Dashboard() {
+  const { user } = useAuth();
+  const currency = user?.currency || 'AED';
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
@@ -74,9 +77,9 @@ export default function Dashboard() {
           ))
         ) : (
           <>
-            <KPICard label="Total Revenue" value={formatAED(data?.total_revenue || 0)} sub="Paid invoices" icon={Wallet} tone="primary" testid="kpi-total-revenue" />
-            <KPICard label="Unpaid Invoices" value={String(data?.unpaid_count || 0)} sub={formatAED(data?.unpaid_amount || 0) + ' pending'} icon={Clock} tone="amber" testid="kpi-unpaid-invoices" />
-            <KPICard label="Overdue Invoices" value={String(data?.overdue_count || 0)} sub={formatAED(data?.overdue_amount || 0) + ' overdue'} icon={AlertTriangle} tone="red" testid="kpi-overdue-invoices" />
+            <KPICard label="Total Revenue" value={formatMoney(data?.total_revenue || 0, currency)} sub="Paid invoices" icon={Wallet} tone="primary" testid="kpi-total-revenue" />
+            <KPICard label="Unpaid Invoices" value={String(data?.unpaid_count || 0)} sub={formatMoney(data?.unpaid_amount || 0, currency) + ' pending'} icon={Clock} tone="amber" testid="kpi-unpaid-invoices" />
+            <KPICard label="Overdue Invoices" value={String(data?.overdue_count || 0)} sub={formatMoney(data?.overdue_amount || 0, currency) + ' overdue'} icon={AlertTriangle} tone="red" testid="kpi-overdue-invoices" />
             <KPICard label="Active Projects" value={String(data?.active_projects || 0)} sub={`${data?.total_clients || 0} clients`} icon={FolderKanban} tone="cyan" testid="kpi-active-projects" />
           </>
         )}
@@ -104,7 +107,7 @@ export default function Dashboard() {
                   <CartesianGrid stroke="hsl(var(--border))" strokeOpacity={0.5} vertical={false} />
                   <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }} />
                   <YAxis axisLine={false} tickLine={false} tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }} width={60} />
-                  <Tooltip content={<CustomTooltip />} cursor={{ stroke: 'hsl(var(--primary))', strokeOpacity: 0.4 }} />
+                  <Tooltip content={<CustomTooltip currency={currency} />} cursor={{ stroke: 'hsl(var(--primary))', strokeOpacity: 0.4 }} />
                   <Area type="monotone" dataKey="earnings" stroke="hsl(var(--primary))" strokeWidth={2} fill="url(#earnGrad)" />
                 </AreaChart>
               </ResponsiveContainer>
@@ -130,7 +133,7 @@ export default function Dashboard() {
                       <div className="text-xs text-muted-foreground">Due {formatDate(inv.due_date)}</div>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
-                      <span className="text-sm tabular-nums">{formatAED(inv.total)}</span>
+                      <span className="text-sm tabular-nums">{formatMoney(inv.total, inv.currency || currency)}</span>
                       <StatusBadge status={inv.status} />
                     </div>
                   </button>
