@@ -12,6 +12,8 @@ import { DocumentMetadataCard } from '@/components/forms/DocumentMetadataCard';
 import { LineItemsCard } from '@/components/forms/LineItemsCard';
 import { SummaryCard } from '@/components/forms/SummaryCard';
 import { SendEmailDialog } from '@/components/forms/SendEmailDialog';
+import { AIGenerateButton } from '@/components/AIGenerateButton';
+import { MessageCircle, Link as LinkIcon } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { CardHeader, CardTitle } from '@/components/ui/card';
 
@@ -208,6 +210,49 @@ export default function DocumentEditor({ kind }) {
     setEmailOpen(true);
   }, [id, clients, doc, kind, user, totals]);
 
+  const applyAIResult = useCallback((aiData) => {
+    setDoc((d) => ({
+      ...d,
+      title: aiData.title || d.title,
+      notes: aiData.notes || d.notes,
+      items: (aiData.items && aiData.items.length > 0)
+        ? withKeys(aiData.items)
+        : d.items,
+    }));
+  }, []);
+
+  const shareLink = useCallback(async () => {
+    if (!id) { toast.error('Save first'); return; }
+    try {
+      const { data } = await api.post(`/invoices/${id}/share`);
+      const url = `${window.location.origin}/p/${data.token}`;
+      await navigator.clipboard.writeText(url);
+      toast.success('Public link copied to clipboard');
+    } catch (err) { console.error('share failed', err); toast.error('Failed to create share link'); }
+  }, [id]);
+
+  const whatsappShare = useCallback(async () => {
+    if (!id) { toast.error('Save first'); return; }
+    try {
+      const { data } = await api.post(`/invoices/${id}/share`);
+      const url = `${window.location.origin}/p/${data.token}`;
+      const businessName = user?.business_name || user?.name || 'Lancely';
+      const msg = `Hi ${(clients.find(c => c.id === doc.client_id)?.name) || 'there'}, please find ${titleNoun.toLowerCase()} ${doc.number || ''} for ${formatMoney(totals.total, doc.currency)}: ${url}\n— ${businessName}`;
+      window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
+    } catch (err) { console.error('wa share failed', err); toast.error('Failed to share'); }
+  }, [id, clients, doc, user, titleNoun, totals]);
+
+  const aiComposeEmail = useCallback(async (flavor) => {
+    if (!id) { toast.error('Save first'); return; }
+    try {
+      toast.info('AI is drafting your email...');
+      const { data } = await api.post('/ai/compose-email', { invoice_id: id, flavor });
+      setEmailForm({ to: data.to, subject: data.subject, html: data.html });
+      try { const { data: status } = await api.get('/email/status'); setEmailStatus(status); } catch (e) { console.warn('email status', e); }
+      setEmailOpen(true);
+    } catch (err) { console.error('AI compose failed', err); toast.error(err?.response?.data?.detail || 'AI compose failed'); }
+  }, [id]);
+
   const sendEmail = useCallback(async (e) => {
     e?.preventDefault();
     if (!emailForm.to || !emailForm.subject) { toast.error('Recipient and subject are required'); return; }
@@ -245,7 +290,11 @@ export default function DocumentEditor({ kind }) {
           </div>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          {id && <Button onClick={openEmail} variant="secondary" data-testid={`${kind}-send-email-button`}><Mail className="h-4 w-4 mr-1.5" /> Send Email</Button>}
+          <AIGenerateButton kind={kind} currency={doc.currency} onApply={applyAIResult} />
+          {id && isInvoice && <Button onClick={() => aiComposeEmail('gentle')} variant="secondary" data-testid={`${kind}-ai-compose-email`}><Mail className="h-4 w-4 mr-1.5" /> AI Email</Button>}
+          {id && isInvoice && <Button onClick={whatsappShare} variant="secondary" className="text-emerald-300" data-testid={`${kind}-whatsapp-share`}><MessageCircle className="h-4 w-4 mr-1.5" /> WhatsApp</Button>}
+          {id && isInvoice && <Button onClick={shareLink} variant="ghost" data-testid={`${kind}-public-share`}><LinkIcon className="h-4 w-4 mr-1.5" /> Link</Button>}
+          {id && <Button onClick={openEmail} variant="ghost" data-testid={`${kind}-send-email-button`}><Mail className="h-4 w-4 mr-1.5" /> Send Email</Button>}
           {id && isInvoice && doc.status !== 'paid' && <Button onClick={() => setStatus('paid')} variant="secondary" data-testid="invoice-mark-paid-button"><Receipt className="h-4 w-4 mr-1.5" /> Mark Paid</Button>}
           {id && isInvoice && doc.status === 'paid' && <Button onClick={() => setStatus('unpaid')} variant="ghost" data-testid="invoice-mark-unpaid-button"><RefreshCw className="h-4 w-4 mr-1.5" /> Mark Unpaid</Button>}
           {id && !isInvoice && <Button onClick={convertToInvoice} variant="secondary" data-testid="quotation-convert-to-invoice-button"><Receipt className="h-4 w-4 mr-1.5" /> Convert to Invoice</Button>}

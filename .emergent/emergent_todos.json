@@ -1,46 +1,50 @@
 [
   {
-    "content": "Backend: fix `is` literal comparisons (lines 254, 918, 957)",
+    "content": "Wire extras.py into server.py + start auto-reminder scheduler on app startup",
     "status": "completed"
   },
   {
-    "content": "Backend: extract validation helpers in create_invoice/create_quotation/create_recurring",
+    "content": "Add AI endpoints: /ai/parse-invoice, /ai/compose-email, /ai/categorize-expense",
     "status": "completed"
   },
   {
-    "content": "Backend: refactor pdf_generator into smaller builder helpers",
+    "content": "Build Expenses page (with AI auto-categorize)",
     "status": "completed"
   },
   {
-    "content": "Backend: extract analytics_dashboard calculation helpers",
+    "content": "Build Reports page (P&L, Aging, Cash Flow, Client Profitability)",
     "status": "completed"
   },
   {
-    "content": "Frontend: fix React hook missing deps (AuthContext, ThemeContext, Settings, DocumentEditor, RecurringEditor, Topbar)",
+    "content": "Build Activity feed page",
     "status": "completed"
   },
   {
-    "content": "Frontend: replace array-index-as-key with stable keys in line items",
+    "content": "AI Invoice Generator modal on new invoice/quote pages",
     "status": "completed"
   },
   {
-    "content": "Frontend: add error logging in empty catch blocks",
+    "content": "AI Email Composer (multiple flavors) wired into invoice editor",
     "status": "completed"
   },
   {
-    "content": "Frontend: extract DocumentEditor sub-components (DocumentMetadataCard, LineItemsCard, SummaryCard, SendEmailDialog)",
+    "content": "Reminder Settings tab in Settings",
     "status": "completed"
   },
   {
-    "content": "Frontend: useMemo for expensive computation in Dashboard JSX",
+    "content": "Public invoice page (/p/:token)",
     "status": "completed"
   },
   {
-    "content": "Add SECURITY.md note on token storage trade-off",
+    "content": "WhatsApp + public link share buttons on invoice editor",
     "status": "completed"
   },
   {
-    "content": "Final lint + smoke test",
+    "content": "Sidebar nav updates (Expenses / Reports / Activity)",
+    "status": "completed"
+  },
+  {
+    "content": "Smoke test passed - 0 page errors",
     "status": "completed"
   }
 ]

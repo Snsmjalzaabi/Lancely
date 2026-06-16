@@ -1,5 +1,5 @@
 import { NavLink, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Users, FileText, Receipt, FolderKanban, BellRing, Settings as SettingsIcon, LogOut, Sparkles, Repeat } from 'lucide-react';
+import { LayoutDashboard, Users, FileText, Receipt, FolderKanban, BellRing, Settings as SettingsIcon, LogOut, Sparkles, Repeat, Wallet, BarChart3, Activity } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
@@ -19,7 +19,15 @@ const groups = [
       { to: '/quotations', icon: FileText, label: 'Quotations', testid: 'sidebar-nav-quotations' },
       { to: '/invoices', icon: Receipt, label: 'Invoices', testid: 'sidebar-nav-invoices' },
       { to: '/recurring', icon: Repeat, label: 'Recurring', testid: 'sidebar-nav-recurring' },
+      { to: '/expenses', icon: Wallet, label: 'Expenses', testid: 'sidebar-nav-expenses' },
       { to: '/payments', icon: BellRing, label: 'Payments', testid: 'sidebar-nav-payments' },
+    ],
+  },
+  {
+    label: 'Insights',
+    items: [
+      { to: '/reports', icon: BarChart3, label: 'Reports', testid: 'sidebar-nav-reports' },
+      { to: '/activity', icon: Activity, label: 'Activity', testid: 'sidebar-nav-activity' },
     ],
   },
   {

@@ -15,6 +15,10 @@ import Projects from '@/pages/Projects';
 import Payments from '@/pages/Payments';
 import Recurring from '@/pages/Recurring';
 import RecurringEditor from '@/pages/RecurringEditor';
+import Expenses from '@/pages/Expenses';
+import Reports from '@/pages/Reports';
+import ActivityFeed from '@/pages/ActivityFeed';
+import PublicInvoice from '@/pages/PublicInvoice';
 import Settings from '@/pages/Settings';
 import '@/App.css';
 
@@ -69,8 +73,12 @@ function App() {
                 <Route path="recurring" element={<Recurring />} />
                 <Route path="recurring/new" element={<RecurringEditor />} />
                 <Route path="recurring/:id" element={<RecurringEditor />} />
+                <Route path="expenses" element={<Expenses />} />
+                <Route path="reports" element={<Reports />} />
+                <Route path="activity" element={<ActivityFeed />} />
                 <Route path="settings" element={<Settings />} />
               </Route>
+              <Route path="/p/:token" element={<PublicInvoice />} />
               <Route path="*" element={<Navigate to="/dashboard" replace />} />
             </Routes>
           </BrowserRouter>

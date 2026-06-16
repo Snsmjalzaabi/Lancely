@@ -5,7 +5,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Save, User, Building2, Coins, Palette, Mail } from 'lucide-react';
+import { Save, User, Building2, Coins, Palette, Mail, BellRing } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
 import { api } from '@/lib/api';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
@@ -18,6 +19,8 @@ export default function Settings() {
   const [saving, setSaving] = useState(false);
   const [currencies, setCurrencies] = useState([]);
   const [emailStatus, setEmailStatus] = useState(null);
+  const [reminders, setReminders] = useState({ auto_reminders_enabled: false, remind_days_before_due: [3], remind_days_after_due: [1, 7] });
+  const [remindersBusy, setRemindersBusy] = useState(false);
 
   useEffect(() => {
     if (user) setForm({
@@ -34,7 +37,18 @@ export default function Settings() {
   useEffect(() => {
     api.get('/currencies').then(({ data }) => setCurrencies(data)).catch((err) => console.warn('Could not load currencies:', err?.message || err));
     api.get('/email/status').then(({ data }) => setEmailStatus(data)).catch((err) => console.warn('Could not load email status:', err?.message || err));
+    api.get('/reminders/settings').then(({ data }) => setReminders((prev) => ({ ...prev, ...data }))).catch((err) => console.warn('Could not load reminders settings:', err?.message || err));
   }, []);
+
+  const saveReminders = async (next) => {
+    setRemindersBusy(true);
+    try {
+      const { data } = await api.put('/reminders/settings', next);
+      setReminders((prev) => ({ ...prev, ...data, ...next }));
+      toast.success('Reminders updated');
+    } catch (err) { console.error('Reminders save', err); toast.error('Failed to save reminders'); }
+    finally { setRemindersBusy(false); }
+  };
 
   const save = async (e) => {
     e?.preventDefault();
@@ -62,6 +76,7 @@ export default function Settings() {
           <TabsTrigger value="business" data-testid="settings-tab-business"><Building2 className="h-3.5 w-3.5 mr-1.5" /> Business</TabsTrigger>
           <TabsTrigger value="preferences" data-testid="settings-tab-preferences"><Palette className="h-3.5 w-3.5 mr-1.5" /> Preferences</TabsTrigger>
           <TabsTrigger value="email" data-testid="settings-tab-email"><Mail className="h-3.5 w-3.5 mr-1.5" /> Email</TabsTrigger>
+          <TabsTrigger value="reminders" data-testid="settings-tab-reminders"><BellRing className="h-3.5 w-3.5 mr-1.5" /> Reminders</TabsTrigger>
         </TabsList>
         <form onSubmit={save}>
           <TabsContent value="profile" className="mt-4">
@@ -147,6 +162,34 @@ export default function Settings() {
                     <p className="text-xs text-muted-foreground max-w-2xl">{emailStatus.note}</p>
                   </div>
                 ) : <div className="text-sm text-muted-foreground">Loading email status...</div>}
+              </CardContent>
+            </Card>
+          </TabsContent>
+          <TabsContent value="reminders" className="mt-4">
+            <Card className="rounded-2xl border border-border bg-card [box-shadow:var(--shadow-elev-1)]">
+              <CardHeader className="pb-3"><CardTitle className="font-display text-base flex items-center gap-2"><BellRing className="h-4 w-4 text-primary" /> Automated Payment Reminders</CardTitle></CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <Label>Enable auto-reminders</Label>
+                    <p className="text-xs text-muted-foreground mt-0.5">An hourly job emails clients before due and after due. Requires email service to be configured.</p>
+                  </div>
+                  <Switch checked={!!reminders.auto_reminders_enabled} disabled={remindersBusy} onCheckedChange={(v) => saveReminders({ ...reminders, auto_reminders_enabled: v })} data-testid="reminders-toggle" />
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label>Days BEFORE due (comma-separated)</Label>
+                    <Input value={(reminders.remind_days_before_due || []).join(', ')} onChange={(e) => setReminders({ ...reminders, remind_days_before_due: e.target.value.split(',').map(s => Number(s.trim())).filter(n => !isNaN(n) && n >= 0) })} className="bg-background/40 tabular-nums" placeholder="3, 1" data-testid="reminders-days-before" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Days AFTER due (overdue)</Label>
+                    <Input value={(reminders.remind_days_after_due || []).join(', ')} onChange={(e) => setReminders({ ...reminders, remind_days_after_due: e.target.value.split(',').map(s => Number(s.trim())).filter(n => !isNaN(n) && n >= 0) })} className="bg-background/40 tabular-nums" placeholder="1, 7" data-testid="reminders-days-after" />
+                  </div>
+                </div>
+                <div className="flex justify-end">
+                  <Button type="button" variant="secondary" disabled={remindersBusy} onClick={() => saveReminders(reminders)} data-testid="reminders-save">Save reminder schedule</Button>
+                </div>
+                {!emailStatus?.configured && <div className="text-xs text-amber-300 border border-amber-500/30 bg-amber-500/5 rounded-lg p-3">Email service is not configured. Reminders will be logged but no real emails sent until you add <code className="font-mono">RESEND_API_KEY</code> to backend .env.</div>}
               </CardContent>
             </Card>
           </TabsContent>

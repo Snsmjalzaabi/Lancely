@@ -1125,6 +1125,22 @@ async def send_email(data: EmailSendIn, current_user: dict = Depends(get_current
 async def root():
     return {"message": "Lancely API", "version": "1.0.0"}
 
+
+# -----------------------
+# Wire extras.py (Phase 5 — automation & power features)
+# -----------------------
+from extras import build_extras_router, attach_ai_routes, process_due_reminders
+
+extras_router = build_extras_router(
+    db=db,
+    get_current_user=get_current_user,
+    serialize_doc=serialize_doc,
+    CURRENCY_CODES=CURRENCY_CODES,
+    api_base_for_links="/api",
+)
+attach_ai_routes(extras_router, get_current_user, db)
+api_router.include_router(extras_router)
+
 # Include the router in the main app
 app.include_router(api_router)
 
@@ -1142,6 +1158,69 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+
+# -----------------------
+# Auto-reminder scheduler
+# -----------------------
+async def _scheduler_send_email(user_id: str, invoice_id: str, to_email: str, subject: str, html: str) -> dict:
+    """Adapter so the scheduler can send through the same logic as POST /email/send."""
+    log_doc = {
+        "id": new_id(),
+        "user_id": user_id,
+        "to": str(to_email),
+        "subject": subject,
+        "html": html,
+        "invoice_id": invoice_id,
+        "status": "pending",
+        "provider_id": None,
+        "error": None,
+        "created_at": now_utc().isoformat(),
+        "automated": True,
+    }
+    if not RESEND_API_KEY:
+        log_doc["status"] = "not_configured"
+        await db.email_logs.insert_one(log_doc)
+        return {"ok": False, "status": "not_configured"}
+    try:
+        params = {"from": SENDER_EMAIL, "to": [str(to_email)], "subject": subject, "html": html}
+        result = await asyncio.to_thread(resend.Emails.send, params)
+        log_doc["status"] = "sent"
+        log_doc["provider_id"] = result.get("id") if isinstance(result, dict) else None
+        await db.email_logs.insert_one(log_doc)
+        return {"ok": True, "status": "sent"}
+    except Exception as e:
+        log_doc["status"] = "failed"
+        log_doc["error"] = str(e)
+        await db.email_logs.insert_one(log_doc)
+        return {"ok": False, "status": "failed", "error": str(e)}
+
+
+_reminder_task: Optional[asyncio.Task] = None
+
+
+async def _reminder_loop():
+    """Run process_due_reminders every hour. Safe to fail; will retry next tick."""
+    await asyncio.sleep(15)  # let the app finish starting up
+    while True:
+        try:
+            await process_due_reminders(db, _scheduler_send_email)
+        except Exception as e:
+            logger.warning("reminder loop error: %s", e)
+        # Sleep 1 hour
+        await asyncio.sleep(3600)
+
+
+@app.on_event("startup")
+async def _start_scheduler():
+    global _reminder_task
+    if _reminder_task is None or _reminder_task.done():
+        _reminder_task = asyncio.create_task(_reminder_loop())
+        logger.info("auto-reminder loop started (hourly)")
+
+
 @app.on_event("shutdown")
 async def shutdown_db_client():
+    global _reminder_task
+    if _reminder_task and not _reminder_task.done():
+        _reminder_task.cancel()
     client.close()
