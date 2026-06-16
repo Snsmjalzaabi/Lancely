@@ -11,7 +11,6 @@ import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 
 import { ScreenHeader } from "../components/Header";
-import { api } from "../lib/api";
 import { useAuth } from "../lib/auth";
 import {
   getOfferings,
@@ -27,7 +26,6 @@ import {
   useTheme,
   type ColorPalette,
 } from "../lib/theme";
-import type { User } from "../lib/types";
 
 const FEATURES = [
   { icon: "infinite-outline" as const, label: "Unlimited clients, projects & invoices" },
@@ -78,15 +76,11 @@ export default function ProPaywallScreen() {
           setError(res.reason ?? "Purchase failed");
           return;
         }
-        // Sync with our backend so is_pro flips immediately (webhook will confirm later)
-        await api<User>("/me/upgrade", { method: "POST" });
         await refresh();
         router.back();
       } else {
-        // Dev fallback for Expo Go / web — mocked upgrade
-        await api<User>("/me/upgrade", { method: "POST" });
-        await refresh();
-        router.back();
+        // Web / Expo Go preview \u2014 no mocked endpoint on shared backend.
+        setError("Pro purchases are only available on iOS builds. Run the app on a real device after publishing.");
       }
     } catch (e) {
       const m = e instanceof Error ? e.message : "Upgrade failed";
@@ -106,7 +100,6 @@ export default function ProPaywallScreen() {
           setError(res.reason ?? "Nothing to restore");
           return;
         }
-        await api<User>("/me/upgrade", { method: "POST" });
         await refresh();
       } else {
         setError("Restore is only available on iOS production builds.");
@@ -123,11 +116,8 @@ export default function ProPaywallScreen() {
     setError(null);
     setBusy(true);
     try {
-      await api<User>("/me/downgrade", { method: "POST" });
-      await refresh();
-    } catch (e) {
-      const m = e instanceof Error ? e.message : "Operation failed";
-      setError(m);
+      // Pro subscriptions are managed via the App Store / Play Store. Direct user there.
+      setError("To cancel, open Settings \u2192 Apple ID \u2192 Subscriptions on your device.");
     } finally {
       setBusy(false);
     }

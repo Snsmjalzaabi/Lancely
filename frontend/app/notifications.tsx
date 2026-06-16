@@ -45,8 +45,9 @@ export default function NotificationsScreen() {
   const [refreshing, setRefreshing] = useState(false);
 
   const load = useCallback(async () => {
-    const r = await api<{ items: Notification[] }>("/notifications");
-    setItems(r.items);
+    const r = await api<{ rows?: Notification[]; items?: Notification[] }>("/payments/reminders").catch(() => ({} as { items?: Notification[]; rows?: Notification[] }));
+    const arr: Notification[] = Array.isArray(r) ? r as unknown as Notification[] : (r.items ?? r.rows ?? []);
+    setItems(arr);
   }, []);
 
   useFocusEffect(

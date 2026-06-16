@@ -72,7 +72,7 @@ export default function InvoiceDetail() {
     try {
       const updated = await api<Invoice>(`/invoices/${invoice.id}/status`, {
         method: "PATCH",
-        query: { status: "paid" },
+        body: { status: "paid", payment_date: new Date().toISOString().slice(0, 10) },
       });
       setInvoice(updated);
     } finally {
