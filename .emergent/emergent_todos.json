@@ -1,26 +1,38 @@
 [
   {
     "content": "Harden BillingContext + Pricing against missing/incomplete RC config",
-    "status": "in_progress"
+    "status": "completed"
   },
   {
     "content": "Verify backend doesn't crash with missing RC_SECRET_API_KEY",
-    "status": "pending"
+    "status": "completed"
   },
   {
-    "content": "Update title (Lancely - Freelance OS), favicons, sitemap, robots verified",
-    "status": "pending"
+    "content": "Verify title (Lancely - Freelance OS), favicons, sitemap, robots",
+    "status": "completed"
   },
   {
     "content": "Run lint sweep on backend + frontend",
+    "status": "completed"
+  },
+  {
+    "content": "Run deployment_agent health check — PASS",
+    "status": "completed"
+  },
+  {
+    "content": "Write redeployment review doc",
+    "status": "completed"
+  },
+  {
+    "content": "POST-REDEPLOY: Build public landing page (500+ words, hero, features, pricing CTA, FAQ)",
     "status": "pending"
   },
   {
-    "content": "Run deployment_agent health check",
+    "content": "POST-REDEPLOY: Verify sitemap.xml live on production",
     "status": "pending"
   },
   {
-    "content": "Write redeployment summary doc",
+    "content": "POST-REDEPLOY: Finish RevenueCat wiring (Secret API Key, entitlement, packages)",
     "status": "pending"
   }
 ]
