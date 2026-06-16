@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { PlanBadge } from '@/components/billing/PlanBadge';
 import { api } from '@/lib/api';
 
 const titles = {
@@ -52,7 +53,16 @@ export default function Topbar({ onMenu }) {
           </Button>
           <h1 className="font-display text-base sm:text-lg font-semibold tracking-tight truncate" data-testid="topbar-title">{getTitle(pathname)}</h1>
         </div>
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => navigate('/settings?tab=billing')}
+            className="hidden sm:inline-flex"
+            aria-label="Open billing settings"
+            data-testid="topbar-plan-badge-button"
+          >
+            <PlanBadge />
+          </button>
           <Button variant="ghost" size="icon" className="h-9 w-9 hover:bg-muted/60" onClick={handleToggleTheme} data-testid="topbar-theme-toggle" aria-label="Toggle theme" title={theme === 'dark' ? 'Switch to light' : 'Switch to dark'}>
             {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
           </Button>

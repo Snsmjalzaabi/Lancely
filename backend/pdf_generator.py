@@ -160,15 +160,40 @@ def _build_totals_block(doc_data: dict, currency: str):
     return wrap
 
 
-def _build_notes_and_footer(doc_data: dict, S: dict):
+def _build_notes_and_footer(doc_data: dict, user_doc: dict, S: dict):
     blocks = []
     if doc_data.get('notes'):
         blocks.append(Paragraph('NOTES', S["label"]))
         blocks.append(Paragraph(doc_data['notes'].replace('\n', '<br/>'), S["small"]))
         blocks.append(Spacer(1, 10))
     blocks.append(Spacer(1, 16))
-    blocks.append(Paragraph('Thank you for your business. \u00b7 Generated with Lancely', S["muted"]))
+    # Free-tier watermark / Pro-tier subtle credit
+    user_plan = (user_doc or {}).get('plan_tier') or 'free'
+    trial_end = (user_doc or {}).get('trial_ends_at')
+    is_free = user_plan == 'free' and not _is_trial_active(trial_end)
+    if is_free:
+        # Visible promotional footer for the Free plan
+        blocks.append(Paragraph(
+            '<para alignment="center"><font color="#0e7490">Made with <b>Lancely</b> '
+            '\u2014 the all-in-one OS for UAE freelancers. Try free at lance-ly.com</font></para>',
+            S["muted"],
+        ))
+    else:
+        blocks.append(Paragraph('Thank you for your business. \u00b7 Generated with Lancely', S["muted"]))
     return blocks
+
+
+def _is_trial_active(trial_ends_at) -> bool:
+    if not trial_ends_at:
+        return False
+    try:
+        from datetime import datetime, timezone
+        end = datetime.fromisoformat(str(trial_ends_at).replace('Z', '+00:00'))
+        if end.tzinfo is None:
+            end = end.replace(tzinfo=timezone.utc)
+        return datetime.now(timezone.utc) < end
+    except Exception:
+        return False
 
 
 # ---------- main entry points ----------
@@ -196,7 +221,7 @@ def _build_document(doc_type: str, doc_data: dict, client_doc: dict, user_doc: d
     elements.append(Spacer(1, 10))
     elements.append(_build_totals_block(doc_data, currency))
     elements.append(Spacer(1, 16))
-    elements.extend(_build_notes_and_footer(doc_data, S))
+    elements.extend(_build_notes_and_footer(doc_data, user_doc, S))
 
     pdf.build(elements)
     return buffer.getvalue()

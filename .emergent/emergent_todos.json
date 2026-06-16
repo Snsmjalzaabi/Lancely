@@ -1,26 +1,30 @@
 [
   {
-    "content": "Fix .gitignore to allow .env files (BLOCKER)",
+    "content": "Phase 1: Backend foundation — plan fields, billing module, webhook, plan dep",
     "status": "completed"
   },
   {
-    "content": "Add projections to /api/payments/reminders queries (BLOCKER)",
+    "content": "Phase 2: Gate Pro features — AI, recurring, templates, free limits, PDF watermark",
     "status": "completed"
   },
   {
-    "content": "Fix N+1 in process_due_reminders with batched queries (BLOCKER)",
+    "content": "Phase 3: Frontend — BillingProvider, Pricing page, Billing tab, global Upgrade modal, PlanBadge",
     "status": "completed"
   },
   {
-    "content": "Add projections to /api/reports/client-profitability (BLOCKER)",
+    "content": "Phase 4: E2E test — trial users get Pro access, free users gated correctly, upgrade modal works",
     "status": "completed"
   },
   {
-    "content": "Add projections to /api/analytics/dashboard (BLOCKER)",
+    "content": "MONETIZATION_SETUP.md walkthrough written",
     "status": "completed"
   },
   {
-    "content": "Re-run deployment_agent — ✅ PASS",
-    "status": "completed"
+    "content": "POST-MONETIZATION: Build public landing page with 500+ words to fix SEO",
+    "status": "pending"
+  },
+  {
+    "content": "POST-MONETIZATION: Verify sitemap on production after redeploy",
+    "status": "pending"
   }
 ]

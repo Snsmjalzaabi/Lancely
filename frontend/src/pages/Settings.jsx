@@ -5,9 +5,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Save, User, Building2, Coins, Palette, Mail, BellRing } from 'lucide-react';
+import { Save, User, Building2, Coins, Palette, Mail, BellRing, CreditCard } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import ReminderTemplates from '@/components/ReminderTemplates';
+import { BillingSettings } from '@/components/billing/BillingSettings';
 import { api } from '@/lib/api';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
@@ -78,6 +79,7 @@ export default function Settings() {
           <TabsTrigger value="preferences" data-testid="settings-tab-preferences"><Palette className="h-3.5 w-3.5 mr-1.5" /> Preferences</TabsTrigger>
           <TabsTrigger value="email" data-testid="settings-tab-email"><Mail className="h-3.5 w-3.5 mr-1.5" /> Email</TabsTrigger>
           <TabsTrigger value="reminders" data-testid="settings-tab-reminders"><BellRing className="h-3.5 w-3.5 mr-1.5" /> Reminders</TabsTrigger>
+          <TabsTrigger value="billing" data-testid="settings-tab-billing"><CreditCard className="h-3.5 w-3.5 mr-1.5" /> Billing</TabsTrigger>
         </TabsList>
         <form onSubmit={save}>
           <TabsContent value="profile" className="mt-4">
@@ -194,6 +196,9 @@ export default function Settings() {
               </CardContent>
             </Card>
             <ReminderTemplates />
+          </TabsContent>
+          <TabsContent value="billing" className="mt-4">
+            <BillingSettings />
           </TabsContent>
           <div className="flex justify-end mt-5">
             <Button type="submit" disabled={saving} className="bg-primary text-primary-foreground hover:bg-primary/90" data-testid="settings-save"><Save className="h-4 w-4 mr-1.5" /> {saving ? 'Saving...' : 'Save changes'}</Button>

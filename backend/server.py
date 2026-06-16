@@ -240,6 +240,8 @@ async def register(data: UserRegister):
     existing = await db.users.find_one({"email": data.email.lower()})
     if existing:
         raise HTTPException(status_code=400, detail="Email already registered")
+    now = now_utc()
+    trial_end = (now + timedelta(days=14)).isoformat()
     user_doc = {
         "id": new_id(),
         "email": data.email.lower(),
@@ -252,7 +254,19 @@ async def register(data: UserRegister):
         "currency": "AED",
         "theme": "dark",
         "password_hash": hash_password(data.password),
-        "created_at": now_utc().isoformat(),
+        "created_at": now.isoformat(),
+        # ---- Monetization fields (RevenueCat-driven) ----
+        # plan_tier: "free" | "pro" | "trial"
+        # During 14-day trial the user enjoys Pro access; afterwards they revert to "free"
+        # unless they've subscribed. RevenueCat webhooks override these fields once a paid
+        # subscription becomes active.
+        "plan_tier": "trial",
+        "trial_started_at": now.isoformat(),
+        "trial_ends_at": trial_end,
+        "current_period_end": trial_end,
+        "rc_entitlements": {},
+        "rc_last_event_type": None,
+        "rc_last_event_at": None,
     }
     await db.users.insert_one(user_doc)
     token = create_token(user_doc["id"])
@@ -290,6 +304,8 @@ async def update_me(data: UserUpdate, current_user: dict = Depends(get_current_u
 # -----------------------
 @api_router.post("/clients")
 async def create_client(data: ClientIn, current_user: dict = Depends(get_current_user)):
+    from billing import assert_free_tier_quota
+    await assert_free_tier_quota(db, current_user, "clients")
     doc = data.model_dump()
     doc.update({
         "id": new_id(),
@@ -334,6 +350,8 @@ async def delete_client(client_id: str, current_user: dict = Depends(get_current
 # -----------------------
 @api_router.post("/quotations")
 async def create_quotation(data: QuotationIn, current_user: dict = Depends(get_current_user)):
+    from billing import assert_free_tier_quota
+    await assert_free_tier_quota(db, current_user, "quotations")
     await ensure_owned_client(data.client_id, current_user["id"])
     items = prepare_line_items(data.items)
     totals = compute_totals(items)
@@ -465,6 +483,8 @@ async def auto_overdue(invoices: List[dict]) -> List[dict]:
 
 @api_router.post("/invoices")
 async def create_invoice(data: InvoiceIn, current_user: dict = Depends(get_current_user)):
+    from billing import assert_free_tier_quota
+    await assert_free_tier_quota(db, current_user, "invoices")
     await ensure_owned_client(data.client_id, current_user["id"])
     items = prepare_line_items(data.items)
     totals = compute_totals(items)
@@ -943,6 +963,14 @@ def _advance_date(d: str, frequency: str) -> str:
 
 @api_router.post("/recurring-invoices")
 async def create_recurring(data: RecurringIn, current_user: dict = Depends(get_current_user)):
+    from billing import has_pro_access, effective_plan_tier
+    if not has_pro_access(current_user):
+        raise HTTPException(status_code=402, detail={
+            "code": "PRO_REQUIRED",
+            "message": "Recurring invoices are available on the Pro plan.",
+            "plan_tier": effective_plan_tier(current_user),
+            "trial_ends_at": current_user.get("trial_ends_at"),
+        })
     if data.frequency not in FREQUENCIES:
         raise HTTPException(status_code=400, detail="Invalid frequency")
     await ensure_owned_client(data.client_id, current_user["id"])
@@ -1158,6 +1186,11 @@ extras_router = build_extras_router(
 )
 attach_ai_routes(extras_router, get_current_user, db)
 api_router.include_router(extras_router)
+
+# Billing & subscriptions (RevenueCat)
+from billing import build_billing_router  # noqa: E402
+billing_router = build_billing_router(db, get_current_user)
+api_router.include_router(billing_router)
 
 # Include the router in the main app
 app.include_router(api_router)

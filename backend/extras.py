@@ -651,6 +651,14 @@ def build_extras_router(
 
     @r.post("/reminders/templates")
     async def create_reminder_template(data: ReminderTemplateIn, user: dict = Depends(get_current_user)):
+        from billing import has_pro_access, effective_plan_tier
+        if not has_pro_access(user):
+            raise HTTPException(402, {
+                "code": "PRO_REQUIRED",
+                "message": "Custom reminder templates are available on the Pro plan.",
+                "plan_tier": effective_plan_tier(user),
+                "trial_ends_at": user.get("trial_ends_at"),
+            })
         if data.trigger not in ("before", "after"):
             raise HTTPException(400, "trigger must be 'before' or 'after'")
         doc = {
@@ -669,6 +677,14 @@ def build_extras_router(
 
     @r.put("/reminders/templates/{tid}")
     async def update_reminder_template(tid: str, data: ReminderTemplateIn, user: dict = Depends(get_current_user)):
+        from billing import has_pro_access, effective_plan_tier
+        if not has_pro_access(user):
+            raise HTTPException(402, {
+                "code": "PRO_REQUIRED",
+                "message": "Custom reminder templates are available on the Pro plan.",
+                "plan_tier": effective_plan_tier(user),
+                "trial_ends_at": user.get("trial_ends_at"),
+            })
         if data.trigger not in ("before", "after"):
             raise HTTPException(400, "trigger must be 'before' or 'after'")
         updates = {
@@ -1007,8 +1023,24 @@ async def ai_categorize_expense(vendor: Optional[str], notes: Optional[str], amo
 
 
 def attach_ai_routes(router: APIRouter, get_current_user, db):
+    # Local import to avoid circular imports during module init
+    from billing import has_pro_access, effective_plan_tier
+
+    def _require_pro(user: dict):
+        if not has_pro_access(user):
+            raise HTTPException(
+                status_code=402,
+                detail={
+                    "code": "PRO_REQUIRED",
+                    "message": "AI features are available on the Pro plan.",
+                    "plan_tier": effective_plan_tier(user),
+                    "trial_ends_at": user.get("trial_ends_at"),
+                },
+            )
+
     @router.post("/ai/parse-invoice")
     async def parse_invoice(data: AIParseIn, user: dict = Depends(get_current_user)):
+        _require_pro(user)
         if not data.text or len(data.text.strip()) < 4:
             raise HTTPException(400, "Description is too short")
         currency = (data.currency or user.get("currency") or "AED").upper()
@@ -1016,6 +1048,7 @@ def attach_ai_routes(router: APIRouter, get_current_user, db):
 
     @router.post("/ai/compose-email")
     async def compose_email(data: AIComposeEmailIn, user: dict = Depends(get_current_user)):
+        _require_pro(user)
         inv = None
         client = None
         if data.invoice_id:
@@ -1050,11 +1083,13 @@ def attach_ai_routes(router: APIRouter, get_current_user, db):
 
     @router.post("/ai/categorize-expense")
     async def categorize_expense(data: AICategorizeIn, user: dict = Depends(get_current_user)):
+        _require_pro(user)
         return await ai_categorize_expense(data.vendor, data.notes, data.amount)
 
     @router.post("/ai/draft-template")
     async def draft_template(data: AITemplateDraftIn, user: dict = Depends(get_current_user)):
         """Generate a starter reminder template the user can edit. Uses {placeholders}."""
+        _require_pro(user)
         when = (
             f"sent {data.days} day(s) BEFORE the invoice due date" if data.trigger == "before"
             else f"sent {data.days} day(s) AFTER the invoice due date (so the invoice is overdue by {data.days} day(s))"

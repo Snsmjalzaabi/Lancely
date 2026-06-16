@@ -27,6 +27,23 @@ api.interceptors.response.use(
         window.location.href = '/login';
       }
     }
+    if (err?.response?.status === 402) {
+      // Pro-gating: surface a global event the UI can listen to and show a friendly modal.
+      const detail = err?.response?.data?.detail || {};
+      try {
+        window.dispatchEvent(new CustomEvent('lancely:upgrade-required', {
+          detail: {
+            code: detail.code,
+            kind: detail.kind,
+            message: detail.message,
+            limit: detail.limit,
+            current: detail.current,
+            planTier: detail.plan_tier,
+            trialEndsAt: detail.trial_ends_at,
+          },
+        }));
+      } catch (e) { /* CustomEvent unsupported — silent */ }
+    }
     return Promise.reject(err);
   }
 );
