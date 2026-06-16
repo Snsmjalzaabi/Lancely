@@ -1,0 +1,28 @@
+# Lancely — robots.txt
+# https://www.lance-ly.com
+
+User-agent: *
+Allow: /
+Allow: /login
+Allow: /register
+
+# Block authenticated/private app routes from being indexed
+Disallow: /dashboard
+Disallow: /clients
+Disallow: /quotations
+Disallow: /invoices
+Disallow: /projects
+Disallow: /payments
+Disallow: /recurring
+Disallow: /expenses
+Disallow: /reports
+Disallow: /activity
+Disallow: /settings
+
+# Block per-user public invoice tokens (user-specific, not for crawling)
+Disallow: /p/
+
+# Block API endpoints from crawlers
+Disallow: /api/
+
+Sitemap: https://www.lance-ly.com/sitemap.xml
