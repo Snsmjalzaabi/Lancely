@@ -80,7 +80,13 @@ Rationale: standard CRUD + JWT auth + server-side PDF generation; no external in
 
 **Conclude Phase 3:** run **testing_agent_v3** again and fix until green.
 
-### Phase 4 — Expand (optional, only after stable)
+### Phase 4 — Power features ✅ COMPLETE
+- Recurring invoices: weekly/monthly/quarterly/yearly templates with auto next_run_date advance, pause/resume, generate-now, run-all-due.
+- CSV exports for clients, invoices, quotations, projects (token-via-query so window.open works).
+- Multi-currency: AED + USD + EUR + GBP + SAR + INR. Per-user default + per-document currency. PDFs are currency-aware.
+- Email reminders via Resend with graceful "not_configured" fallback when RESEND_API_KEY is empty. Compose modal pre-fills from invoice data.
+- Light/dark theme toggle with localStorage + server-side persistence on user account.
+- Testing: testing_agent_v3 — backend 92.6% pass, frontend 100% pass, overall 95%.
 - Recurring invoices (simple templates).
 - Email sending (if requested later; would require a POC then).
 - Multi-currency (if requested later).
