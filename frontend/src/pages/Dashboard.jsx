@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -61,6 +61,12 @@ export default function Dashboard() {
 
   const isEmpty = !loading && data && data.total_clients === 0 && data.unpaid_count === 0 && data.total_revenue === 0;
 
+  // Memoize the "needs attention" list to avoid recomputing on every render
+  const needsAttention = useMemo(
+    () => (data?.recent_invoices || []).filter((i) => i.status !== 'paid').slice(0, 5),
+    [data?.recent_invoices]
+  );
+
   return (
     <div className="space-y-6">
       {/* KPI Grid */}
@@ -122,11 +128,11 @@ export default function Dashboard() {
             <p className="text-xs text-muted-foreground">Recent unpaid / overdue invoices</p>
           </CardHeader>
           <CardContent>
-            {(data?.recent_invoices || []).filter(i => i.status !== 'paid').length === 0 ? (
+            {needsAttention.length === 0 ? (
               <div className="text-sm text-muted-foreground py-8 text-center">All clear. No outstanding invoices.</div>
             ) : (
               <div className="divide-y divide-border">
-                {(data?.recent_invoices || []).filter(i => i.status !== 'paid').slice(0, 5).map(inv => (
+                {needsAttention.map(inv => (
                   <button key={inv.id} onClick={() => navigate(`/invoices/${inv.id}`)} className="w-full text-left py-3 flex items-center justify-between gap-3 hover:bg-muted/30 px-2 -mx-2 rounded-lg transition-colors">
                     <div className="min-w-0">
                       <div className="text-sm font-medium truncate">{inv.number}</div>

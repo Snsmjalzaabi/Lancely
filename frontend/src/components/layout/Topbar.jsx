@@ -36,9 +36,11 @@ export default function Topbar({ onMenu }) {
     toggleTheme();
     try {
       await api.put('/auth/me', { theme: newTheme });
-      // refresh silently
       refreshUser?.();
-    } catch {/* ignore */}
+    } catch (err) {
+      // Theme is still applied locally; server sync is best-effort.
+      console.warn('Failed to sync theme preference with server:', err?.message || err);
+    }
   };
 
   return (

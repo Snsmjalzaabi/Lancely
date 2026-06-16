@@ -32,21 +32,22 @@ export default function Settings() {
   }, [user]);
 
   useEffect(() => {
-    api.get('/currencies').then(({ data }) => setCurrencies(data)).catch(() => {});
-    api.get('/email/status').then(({ data }) => setEmailStatus(data)).catch(() => {});
+    api.get('/currencies').then(({ data }) => setCurrencies(data)).catch((err) => console.warn('Could not load currencies:', err?.message || err));
+    api.get('/email/status').then(({ data }) => setEmailStatus(data)).catch((err) => console.warn('Could not load email status:', err?.message || err));
   }, []);
 
   const save = async (e) => {
     e?.preventDefault();
     setSaving(true);
     try { await api.put('/auth/me', form); await refreshUser(); toast.success('Settings saved'); }
-    catch (err) { toast.error(err?.response?.data?.detail || 'Save failed'); }
+    catch (err) { console.error('Settings save failed:', err); toast.error(err?.response?.data?.detail || 'Save failed'); }
     finally { setSaving(false); }
   };
 
   const changeTheme = async (t) => {
     setTheme(t);
-    try { await api.put('/auth/me', { theme: t }); } catch {}
+    try { await api.put('/auth/me', { theme: t }); }
+    catch (err) { console.warn('Theme sync to server failed (local change still applied):', err?.message || err); }
   };
 
   return (

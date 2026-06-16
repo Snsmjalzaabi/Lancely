@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, useCallback } from 'react';
 
 const ThemeContext = createContext(null);
+const THEME_KEY = 'lancely_theme';
 
 function applyThemeClass(theme) {
   const root = document.documentElement;
@@ -11,18 +12,26 @@ function applyThemeClass(theme) {
   }
 }
 
+function readStoredTheme() {
+  try {
+    const t = localStorage.getItem(THEME_KEY);
+    if (t === 'light' || t === 'dark') return t;
+  } catch (err) {
+    console.warn('Theme read from localStorage failed:', err);
+  }
+  return 'dark';
+}
+
 export function ThemeProvider({ children }) {
-  const [theme, setThemeState] = useState(() => {
-    try {
-      const t = localStorage.getItem('lancely_theme');
-      if (t === 'light' || t === 'dark') return t;
-    } catch {}
-    return 'dark';
-  });
+  const [theme, setThemeState] = useState(readStoredTheme);
 
   useEffect(() => {
     applyThemeClass(theme);
-    try { localStorage.setItem('lancely_theme', theme); } catch {}
+    try {
+      localStorage.setItem(THEME_KEY, theme);
+    } catch (err) {
+      console.warn('Theme persistence to localStorage failed:', err);
+    }
   }, [theme]);
 
   const setTheme = useCallback((t) => {

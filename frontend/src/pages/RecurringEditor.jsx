@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Plus, Trash2, Save, Repeat, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -11,6 +11,7 @@ import { Switch } from '@/components/ui/switch';
 import { api, formatMoney, formatDate } from '@/lib/api';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
+import { withKey, withKeys } from '@/lib/itemKeys';
 
 export default function RecurringEditor() {
   const { user } = useAuth();
@@ -28,7 +29,7 @@ export default function RecurringEditor() {
     next_run_date: new Date().toISOString().slice(0, 10),
     is_active: true,
     currency: user?.currency || 'AED',
-    items: [{ description: '', quantity: 1, rate: 0 }],
+    items: [withKey({ description: '', quantity: 1, rate: 0 })],
     due_days: 14,
   });
 
@@ -52,7 +53,7 @@ export default function RecurringEditor() {
           next_run_date: d.next_run_date || new Date().toISOString().slice(0, 10),
           is_active: !!d.is_active,
           currency: d.currency || 'AED',
-          items: (d.items && d.items.length > 0) ? d.items.map(i => ({ description: i.description, quantity: i.quantity, rate: i.rate })) : [{ description: '', quantity: 1, rate: 0 }],
+          items: (d.items && d.items.length > 0) ? withKeys(d.items.map(i => ({ description: i.description, quantity: i.quantity, rate: i.rate }))) : [withKey({ description: '', quantity: 1, rate: 0 })],
           due_days: d.due_days || 14,
           generated_count: d.generated_count,
           last_generated_at: d.last_generated_at,
@@ -61,9 +62,14 @@ export default function RecurringEditor() {
         setDoc(d => ({ ...d, client_id: cli.data[0].id }));
       }
       setLoading(false);
-    }).catch(() => { if (alive) { toast.error('Failed to load'); setLoading(false); } });
+    }).catch((err) => {
+      if (alive) {
+        console.error('RecurringEditor load failed:', err);
+        toast.error('Failed to load');
+        setLoading(false);
+      }
+    });
     return () => { alive = false; };
-    // eslint-disable-next-line
   }, [id]);
 
   const totals = useMemo(() => {
@@ -72,9 +78,9 @@ export default function RecurringEditor() {
     return { subtotal, vat, total: subtotal + vat };
   }, [doc.items]);
 
-  const updateItem = (idx, key, value) => setDoc(d => ({ ...d, items: d.items.map((it, i) => i === idx ? { ...it, [key]: value } : it) }));
-  const addItem = () => setDoc(d => ({ ...d, items: [...d.items, { description: '', quantity: 1, rate: 0 }] }));
-  const removeItem = (idx) => setDoc(d => ({ ...d, items: d.items.filter((_, i) => i !== idx) }));
+  const updateItem = useCallback((idx, key, value) => setDoc(d => ({ ...d, items: d.items.map((it, i) => i === idx ? { ...it, [key]: value } : it) })), []);
+  const addItem = useCallback(() => setDoc(d => ({ ...d, items: [...d.items, withKey({ description: '', quantity: 1, rate: 0 })] })), []);
+  const removeItem = useCallback((idx) => setDoc(d => ({ ...d, items: d.items.filter((_, i) => i !== idx) })), []);
 
   const save = async () => {
     if (!doc.client_id) { toast.error('Select a client'); return; }
@@ -93,14 +99,17 @@ export default function RecurringEditor() {
       };
       if (id) { await api.put(`/recurring-invoices/${id}`, payload); toast.success('Saved'); }
       else { const { data } = await api.post('/recurring-invoices', payload); toast.success('Recurring invoice created'); navigate(`/recurring/${data.id}`, { replace: true }); }
-    } catch (err) { toast.error(err?.response?.data?.detail || 'Save failed'); }
+    } catch (err) {
+      console.error('Recurring save failed:', err);
+      toast.error(err?.response?.data?.detail || 'Save failed');
+    }
     finally { setSaving(false); }
   };
 
   const generateNow = async () => {
     if (!id) { toast.error('Save first'); return; }
     try { const { data } = await api.post(`/recurring-invoices/${id}/generate`); toast.success(`Generated ${data.number}`); navigate(`/invoices/${data.id}`); }
-    catch { toast.error('Failed to generate'); }
+    catch (err) { console.error('Generate failed:', err); toast.error('Failed to generate'); }
   };
 
   if (loading) return <div className="text-sm text-muted-foreground p-6">Loading...</div>;
@@ -182,7 +191,7 @@ export default function RecurringEditor() {
             </CardHeader>
             <CardContent className="space-y-3">
               {doc.items.map((it, idx) => (
-                <div key={idx} className="grid grid-cols-12 gap-3 items-center">
+                <div key={it._key} className="grid grid-cols-12 gap-3 items-center">
                   <Input className="col-span-12 md:col-span-6 bg-background/40" placeholder="Description" value={it.description} onChange={(e) => updateItem(idx, 'description', e.target.value)} data-testid={`recurring-item-desc-${idx}`} />
                   <Input type="number" min="0" step="0.01" className="col-span-4 md:col-span-2 bg-background/40 text-right tabular-nums" value={it.quantity} onChange={(e) => updateItem(idx, 'quantity', e.target.value)} data-testid={`recurring-item-qty-${idx}`} />
                   <Input type="number" min="0" step="0.01" className="col-span-4 md:col-span-2 bg-background/40 text-right tabular-nums" value={it.rate} onChange={(e) => updateItem(idx, 'rate', e.target.value)} data-testid={`recurring-item-rate-${idx}`} />

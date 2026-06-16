@@ -1,50 +1,46 @@
 [
   {
-    "content": "Phase 4: Install resend package; update .env placeholders",
+    "content": "Backend: fix `is` literal comparisons (lines 254, 918, 957)",
     "status": "completed"
   },
   {
-    "content": "Phase 4: Backend - currency support on users, invoices, quotations + currencies endpoint",
+    "content": "Backend: extract validation helpers in create_invoice/create_quotation/create_recurring",
     "status": "completed"
   },
   {
-    "content": "Phase 4: Backend - CSV export endpoints for clients/invoices/quotations/projects",
+    "content": "Backend: refactor pdf_generator into smaller builder helpers",
     "status": "completed"
   },
   {
-    "content": "Phase 4: Backend - Recurring invoices CRUD + generate next + auto-run on access",
+    "content": "Backend: extract analytics_dashboard calculation helpers",
     "status": "completed"
   },
   {
-    "content": "Phase 4: Backend - Email send endpoint (Resend with graceful 'not configured' fallback)",
+    "content": "Frontend: fix React hook missing deps (AuthContext, ThemeContext, Settings, DocumentEditor, RecurringEditor, Topbar)",
     "status": "completed"
   },
   {
-    "content": "Phase 4: Backend - Update PDF generator to be currency-aware",
+    "content": "Frontend: replace array-index-as-key with stable keys in line items",
     "status": "completed"
   },
   {
-    "content": "Phase 4: Frontend - Light/dark theme toggle with localStorage persistence",
+    "content": "Frontend: add error logging in empty catch blocks",
     "status": "completed"
   },
   {
-    "content": "Phase 4: Frontend - Currency formatter + Settings currency selector + per-doc currency in editor",
+    "content": "Frontend: extract DocumentEditor sub-components (DocumentMetadataCard, LineItemsCard, SummaryCard, SendEmailDialog)",
     "status": "completed"
   },
   {
-    "content": "Phase 4: Frontend - CSV export buttons on each list page",
+    "content": "Frontend: useMemo for expensive computation in Dashboard JSX",
     "status": "completed"
   },
   {
-    "content": "Phase 4: Frontend - Recurring Invoices page + sidebar nav",
+    "content": "Add SECURITY.md note on token storage trade-off",
     "status": "completed"
   },
   {
-    "content": "Phase 4: Frontend - Send Email modal from invoice editor",
-    "status": "completed"
-  },
-  {
-    "content": "Phase 4: End-to-end testing with testing_agent_v3 (95% pass)",
+    "content": "Final lint + smoke test",
     "status": "completed"
   }
 ]

@@ -137,6 +137,30 @@ def compute_totals(items: List[dict]) -> dict:
     total = round(subtotal + vat, 2)
     return {"subtotal": subtotal, "vat": vat, "total": total, "vat_rate": VAT_RATE}
 
+
+def normalize_currency(value: Optional[str], fallback: str) -> str:
+    """Return a valid upper-case currency code, falling back when invalid."""
+    cc = (value or fallback or 'AED').upper()
+    return cc if cc in CURRENCY_CODES else 'AED'
+
+
+def prepare_line_items(raw_items) -> List[dict]:
+    """Convert pydantic LineItems into stored dicts with computed amount."""
+    items = [i.model_dump() for i in raw_items]
+    for it in items:
+        qty = float(it.get('quantity', 0) or 0)
+        rate = float(it.get('rate', 0) or 0)
+        it['amount'] = round(qty * rate, 2)
+    return items
+
+
+async def ensure_owned_client(client_id: str, user_id: str) -> dict:
+    """Fetch a client owned by the given user or raise 400."""
+    doc = await db.clients.find_one({"id": client_id, "user_id": user_id})
+    if not doc:
+        raise HTTPException(status_code=400, detail="Invalid client_id")
+    return doc
+
 # -----------------------
 # Models
 # -----------------------
@@ -310,18 +334,12 @@ async def delete_client(client_id: str, current_user: dict = Depends(get_current
 # -----------------------
 @api_router.post("/quotations")
 async def create_quotation(data: QuotationIn, current_user: dict = Depends(get_current_user)):
-    client_doc = await db.clients.find_one({"id": data.client_id, "user_id": current_user["id"]})
-    if not client_doc:
-        raise HTTPException(status_code=400, detail="Invalid client_id")
-    items = [i.model_dump() for i in data.items]
-    for it in items:
-        it["amount"] = round(float(it.get('quantity', 0) or 0) * float(it.get('rate', 0) or 0), 2)
+    await ensure_owned_client(data.client_id, current_user["id"])
+    items = prepare_line_items(data.items)
     totals = compute_totals(items)
     count = await db.quotations.count_documents({"user_id": current_user["id"]})
     number = f"QTN-{str(count + 1).zfill(4)}"
-    currency = (data.currency or current_user.get('currency') or 'AED').upper()
-    if currency not in CURRENCY_CODES:
-        currency = 'AED'
+    currency = normalize_currency(data.currency, current_user.get('currency'))
     doc = {
         "id": new_id(),
         "user_id": current_user["id"],
@@ -447,18 +465,12 @@ async def auto_overdue(invoices: List[dict]) -> List[dict]:
 
 @api_router.post("/invoices")
 async def create_invoice(data: InvoiceIn, current_user: dict = Depends(get_current_user)):
-    client_doc = await db.clients.find_one({"id": data.client_id, "user_id": current_user["id"]})
-    if not client_doc:
-        raise HTTPException(status_code=400, detail="Invalid client_id")
-    items = [i.model_dump() for i in data.items]
-    for it in items:
-        it["amount"] = round(float(it.get('quantity', 0) or 0) * float(it.get('rate', 0) or 0), 2)
+    await ensure_owned_client(data.client_id, current_user["id"])
+    items = prepare_line_items(data.items)
     totals = compute_totals(items)
     count = await db.invoices.count_documents({"user_id": current_user["id"]})
     number = f"INV-{str(count + 1).zfill(4)}"
-    currency = (data.currency or current_user.get('currency') or 'AED').upper()
-    if currency not in CURRENCY_CODES:
-        currency = 'AED'
+    currency = normalize_currency(data.currency, current_user.get('currency'))
     doc = {
         "id": new_id(),
         "user_id": current_user["id"],
@@ -636,32 +648,22 @@ async def payments_reminders(current_user: dict = Depends(get_current_user)):
 # -----------------------
 # Analytics
 # -----------------------
-@api_router.get("/analytics/dashboard")
-async def analytics_dashboard(current_user: dict = Depends(get_current_user)):
-    invoices = await db.invoices.find({"user_id": current_user["id"]}, {"_id": 0}).to_list(5000)
-    invoices = [serialize_doc(x) for x in invoices]
-    projects = await db.projects.find({"user_id": current_user["id"]}, {"_id": 0}).to_list(5000)
-    projects = [serialize_doc(x) for x in projects]
-    clients = await db.clients.find({"user_id": current_user["id"]}, {"_id": 0}).to_list(5000)
-
-    today = now_utc().date().isoformat()
+def _summarize_invoices(invoices: List[dict], today: str) -> dict:
+    """Compute revenue/unpaid/overdue metrics + monthly earnings from an invoice list."""
     total_revenue = 0.0
     unpaid_count = 0
     unpaid_amount = 0.0
     overdue_count = 0
     overdue_amount = 0.0
-    active_projects = 0
-
     monthly = defaultdict(float)
+
     for inv in invoices:
-        status_v = inv.get("status")
         total = float(inv.get("total", 0) or 0)
-        if status_v == "paid":
+        if inv.get("status") == "paid":
             total_revenue += total
             pd = inv.get("payment_date") or inv.get("issue_date") or inv.get("created_at")
             if pd:
-                month_key = pd[:7]
-                monthly[month_key] += total
+                monthly[pd[:7]] += total
         else:
             due = inv.get("due_date")
             if due and due < today:
@@ -671,32 +673,59 @@ async def analytics_dashboard(current_user: dict = Depends(get_current_user)):
                 unpaid_count += 1
                 unpaid_amount += total
 
-    for p in projects:
-        if p.get("status") == "active":
-            active_projects += 1
+    return {
+        "total_revenue": total_revenue,
+        "unpaid_count": unpaid_count,
+        "unpaid_amount": unpaid_amount,
+        "overdue_count": overdue_count,
+        "overdue_amount": overdue_amount,
+        "monthly": monthly,
+    }
 
-    months_series = []
+
+def _build_months_series(monthly: dict, months: int = 6) -> List[dict]:
+    """Build a fixed-length time series for the last N months."""
+    series = []
     now_dt = now_utc()
-    for i in range(5, -1, -1):
+    for i in range(months - 1, -1, -1):
         y = now_dt.year
         m = now_dt.month - i
         while m <= 0:
             m += 12
             y -= 1
         key = f"{y:04d}-{m:02d}"
-        months_series.append({"month": key, "label": datetime(y, m, 1).strftime('%b'), "earnings": round(monthly.get(key, 0.0), 2)})
+        series.append({
+            "month": key,
+            "label": datetime(y, m, 1).strftime('%b'),
+            "earnings": round(monthly.get(key, 0.0), 2),
+        })
+    return series
 
+
+@api_router.get("/analytics/dashboard")
+async def analytics_dashboard(current_user: dict = Depends(get_current_user)):
+    user_id = current_user["id"]
+    invoices_raw = await db.invoices.find({"user_id": user_id}, {"_id": 0}).to_list(5000)
+    projects_raw = await db.projects.find({"user_id": user_id}, {"_id": 0}).to_list(5000)
+    clients = await db.clients.find({"user_id": user_id}, {"_id": 0}).to_list(5000)
+
+    invoices = [serialize_doc(x) for x in invoices_raw]
+    projects = [serialize_doc(x) for x in projects_raw]
+
+    today = now_utc().date().isoformat()
+    metrics = _summarize_invoices(invoices, today)
+    active_projects = sum(1 for p in projects if p.get("status") == "active")
     recent_invoices = sorted(invoices, key=lambda x: x.get("created_at") or "", reverse=True)[:5]
 
     return {
-        "total_revenue": round(total_revenue, 2),
-        "unpaid_count": unpaid_count,
-        "unpaid_amount": round(unpaid_amount, 2),
-        "overdue_count": overdue_count,
-        "overdue_amount": round(overdue_amount, 2),
+        "total_revenue": round(metrics["total_revenue"], 2),
+        "unpaid_count": metrics["unpaid_count"],
+        "unpaid_amount": round(metrics["unpaid_amount"], 2),
+        "overdue_count": metrics["overdue_count"],
+        "overdue_amount": round(metrics["overdue_amount"], 2),
         "active_projects": active_projects,
         "total_clients": len(clients),
-        "monthly_earnings": months_series,
+        "monthly_earnings": _build_months_series(metrics["monthly"], months=6),
         "recent_invoices": recent_invoices,
     }
 
@@ -898,15 +927,9 @@ def _advance_date(d: str, frequency: str) -> str:
 async def create_recurring(data: RecurringIn, current_user: dict = Depends(get_current_user)):
     if data.frequency not in FREQUENCIES:
         raise HTTPException(status_code=400, detail="Invalid frequency")
-    c = await db.clients.find_one({"id": data.client_id, "user_id": current_user["id"]})
-    if not c:
-        raise HTTPException(status_code=400, detail="Invalid client_id")
-    items = [i.model_dump() for i in data.items]
-    for it in items:
-        it["amount"] = round(float(it.get('quantity', 0) or 0) * float(it.get('rate', 0) or 0), 2)
-    currency = (data.currency or current_user.get('currency') or 'AED').upper()
-    if currency not in CURRENCY_CODES:
-        currency = 'AED'
+    await ensure_owned_client(data.client_id, current_user["id"])
+    items = prepare_line_items(data.items)
+    currency = normalize_currency(data.currency, current_user.get('currency'))
     doc = {
         "id": new_id(),
         "user_id": current_user["id"],
