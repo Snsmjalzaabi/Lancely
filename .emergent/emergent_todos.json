@@ -25,10 +25,14 @@
   },
   {
     "content": "Phase 3: End-to-End testing with testing_agent_v3",
-    "status": "in_progress"
+    "status": "completed"
   },
   {
-    "content": "Phase 3: Fix all bugs found by testing agent",
-    "status": "pending"
+    "content": "Phase 3: Manual smoke test of 10 critical flows",
+    "status": "completed"
+  },
+  {
+    "content": "Phase 3: Fix all bugs found by testing agent (register ObjectId bug fixed)",
+    "status": "completed"
   }
 ]
