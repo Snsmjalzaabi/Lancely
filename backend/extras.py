@@ -477,11 +477,20 @@ def build_extras_router(
 
     @r.get("/reports/client-profitability")
     async def client_profitability(user: dict = Depends(get_current_user)):
-        clients = await db.clients.find({"user_id": user["id"]}, {"_id": 0}).to_list(5000)
-        invs = await db.invoices.find({"user_id": user["id"]}, {"_id": 0}).to_list(10000)
+        client_proj = {"_id": 0, "id": 1, "name": 1, "company": 1}
+        inv_proj = {
+            "_id": 0, "id": 1, "client_id": 1, "status": 1, "total": 1,
+            "paid_amount": 1, "payment_date": 1, "issue_date": 1,
+        }
+        clients = await db.clients.find({"user_id": user["id"]}, client_proj).to_list(5000)
+        invs = await db.invoices.find({"user_id": user["id"]}, inv_proj).to_list(10000)
+        # Build client_id -> invoices map once, O(N), instead of repeated O(N) scans per client.
+        inv_by_client: dict = {}
+        for i in invs:
+            inv_by_client.setdefault(i.get("client_id"), []).append(i)
         out = []
         for c in clients:
-            c_invs = [i for i in invs if i.get("client_id") == c["id"]]
+            c_invs = inv_by_client.get(c["id"], [])
             revenue = sum(float(i.get("total", 0) or 0) for i in c_invs if i.get("status") == "paid")
             outstanding = sum(max(0, float(i.get("total", 0) or 0) - float(i.get("paid_amount", 0) or 0)) for i in c_invs if i.get("status") != "paid")
             # average days to pay
@@ -801,15 +810,27 @@ async def process_due_reminders(db, send_email_fn):
             "status": {"$ne": "paid"},
             "due_date": {"$in": list(date_map.keys())},
         }, {"_id": 0}).to_list(2000)
+        if not invs:
+            continue
+        # Batch-fetch all related clients and recent email logs in 2 queries (was N+1 before).
+        inv_ids = [inv["id"] for inv in invs]
+        client_ids = list({inv.get("client_id") for inv in invs if inv.get("client_id")})
+        cutoff = (now_utc() - timedelta(hours=23)).isoformat()
+        recent_logs_cursor = db.email_logs.find({
+            "user_id": user["id"],
+            "invoice_id": {"$in": inv_ids},
+            "created_at": {"$gte": cutoff},
+        }, {"_id": 0, "invoice_id": 1})
+        recent_invoice_ids = {log["invoice_id"] async for log in recent_logs_cursor}
+        client_docs = await db.clients.find(
+            {"id": {"$in": client_ids}},
+            {"_id": 0, "id": 1, "name": 1, "company": 1, "email": 1, "phone": 1},
+        ).to_list(len(client_ids))
+        client_map = {c["id"]: c for c in client_docs}
         for inv in invs:
-            recent_log = await db.email_logs.find_one({
-                "user_id": user["id"],
-                "invoice_id": inv["id"],
-                "created_at": {"$gte": (now_utc() - timedelta(hours=23)).isoformat()},
-            })
-            if recent_log:
+            if inv["id"] in recent_invoice_ids:
                 continue
-            client = await db.clients.find_one({"id": inv.get("client_id")}, {"_id": 0})
+            client = client_map.get(inv.get("client_id"))
             if not client or not client.get("email"):
                 continue
             trigger, days = date_map.get(inv.get("due_date"), ("after", 0))

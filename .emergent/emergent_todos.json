@@ -1,30 +1,26 @@
 [
   {
-    "content": "Fix Python `is` vs `==` — SKIPPED (all 8 flagged sites are correct `is None` per PEP 8)",
+    "content": "Fix .gitignore to allow .env files (BLOCKER)",
     "status": "completed"
   },
   {
-    "content": "Replace key={i} with stable string keys in 11 skeleton/list locations",
+    "content": "Add projections to /api/payments/reminders queries (BLOCKER)",
     "status": "completed"
   },
   {
-    "content": "Refactor ai_compose_email to accept a dataclass instead of 9 params",
+    "content": "Fix N+1 in process_due_reminders with batched queries (BLOCKER)",
+    "status": "in_progress"
+  },
+  {
+    "content": "Add projections to /api/reports/client-profitability (BLOCKER)",
+    "status": "pending"
+  },
+  {
+    "content": "Add projections to /api/analytics/dashboard (BLOCKER)",
     "status": "completed"
   },
   {
-    "content": "Audit hook deps — confirmed 0 real exhaustive-deps violations; report's 45+ count was from a different analyzer",
-    "status": "completed"
-  },
-  {
-    "content": "Fix cosmetic unescaped-apostrophe lint warnings",
-    "status": "completed"
-  },
-  {
-    "content": "Verify backend & frontend compile + AI compose-email works end-to-end",
-    "status": "completed"
-  },
-  {
-    "content": "Big refactors (build_extras_router / DocumentEditor) — documented as deferred",
-    "status": "completed"
+    "content": "Re-run deployment_agent to verify pass",
+    "status": "pending"
   }
 ]

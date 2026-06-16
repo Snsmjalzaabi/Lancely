@@ -618,13 +618,21 @@ async def delete_project(pid: str, current_user: dict = Depends(get_current_user
 # -----------------------
 @api_router.get("/payments/reminders")
 async def payments_reminders(current_user: dict = Depends(get_current_user)):
-    invoices = await db.invoices.find({"user_id": current_user["id"]}, {"_id": 0}).to_list(2000)
+    # Project only the fields the UI's payments page actually renders — excludes heavyweight
+    # `items` and `notes` to reduce wire size and Mongo IO on large datasets.
+    inv_proj = {
+        "_id": 0, "id": 1, "user_id": 1, "client_id": 1, "number": 1, "status": 1,
+        "issue_date": 1, "due_date": 1, "payment_date": 1, "total": 1, "subtotal": 1,
+        "vat": 1, "paid_amount": 1, "currency": 1, "created_at": 1, "title": 1,
+    }
+    client_proj = {"_id": 0, "id": 1, "name": 1, "company": 1, "email": 1, "phone": 1}
+    invoices = await db.invoices.find({"user_id": current_user["id"]}, inv_proj).to_list(2000)
     invoices = [serialize_doc(x) for x in invoices]
     today = now_utc().date().isoformat()
     in_7_days = (now_utc() + timedelta(days=7)).date().isoformat()
     upcoming, overdue, paid = [], [], []
     clients_map = {}
-    client_docs = await db.clients.find({"user_id": current_user["id"]}, {"_id": 0}).to_list(2000)
+    client_docs = await db.clients.find({"user_id": current_user["id"]}, client_proj).to_list(2000)
     for c in client_docs:
         clients_map[c["id"]] = c
     for inv in invoices:
@@ -705,9 +713,19 @@ def _build_months_series(monthly: dict, months: int = 6) -> List[dict]:
 @api_router.get("/analytics/dashboard")
 async def analytics_dashboard(current_user: dict = Depends(get_current_user)):
     user_id = current_user["id"]
-    invoices_raw = await db.invoices.find({"user_id": user_id}, {"_id": 0}).to_list(5000)
-    projects_raw = await db.projects.find({"user_id": user_id}, {"_id": 0}).to_list(5000)
-    clients = await db.clients.find({"user_id": user_id}, {"_id": 0}).to_list(5000)
+    # Project only what dashboard summarization + recent_invoices list need.
+    # `items` and `notes` are excluded (heavy and unused for analytics/list rendering).
+    inv_proj = {
+        "_id": 0, "id": 1, "client_id": 1, "number": 1, "status": 1,
+        "issue_date": 1, "due_date": 1, "payment_date": 1, "total": 1,
+        "subtotal": 1, "vat": 1, "paid_amount": 1, "currency": 1,
+        "created_at": 1, "title": 1,
+    }
+    proj_proj = {"_id": 0, "id": 1, "status": 1}
+    client_proj = {"_id": 0, "id": 1}  # only the count is needed
+    invoices_raw = await db.invoices.find({"user_id": user_id}, inv_proj).to_list(5000)
+    projects_raw = await db.projects.find({"user_id": user_id}, proj_proj).to_list(5000)
+    clients = await db.clients.find({"user_id": user_id}, client_proj).to_list(5000)
 
     invoices = [serialize_doc(x) for x in invoices_raw]
     projects = [serialize_doc(x) for x in projects_raw]
