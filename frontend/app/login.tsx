@@ -1,15 +1,17 @@
 import { useState } from "react";
 import {
+  ActivityIndicator,
   Image,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
-import { useRouter } from "expo-router";
+import { Link, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 
 import { PrimaryButton } from "../components/PrimaryButton";
@@ -20,11 +22,16 @@ import { radii, spacing, type, useTheme, type ColorPalette, THEME_LIST } from ".
 const LOGO_URL =
   "https://customer-assets.emergentagent.com/job_solvio-mvp/artifacts/jwavdz5g_ChatGPT%20Image%20Jun%2016%2C%202026%2C%2001_05_51%20AM.png";
 
+const DEMO_EMAIL = "test@lancely.ae";
+const DEMO_PASSWORD = "test1234";
+
 export default function Login() {
   const { colors } = useTheme();
   const styles = makeStyles(colors);
-  const { signInWithGoogle, signInDemo, user } = useAuth();
+  const { signIn, user } = useAuth();
   const router = useRouter();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [demoLoading, setDemoLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -34,11 +41,11 @@ export default function Login() {
     router.replace("/(tabs)");
   }
 
-  const onGoogle = async () => {
+  const onSignIn = async () => {
     setError(null);
     setLoading(true);
     try {
-      await signInWithGoogle();
+      await signIn(email, password);
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "Sign-in failed";
       setError(msg);
@@ -51,7 +58,7 @@ export default function Login() {
     setError(null);
     setDemoLoading(true);
     try {
-      await signInDemo();
+      await signIn(DEMO_EMAIL, DEMO_PASSWORD);
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "Demo sign-in failed";
       setError(msg);
@@ -81,49 +88,88 @@ export default function Login() {
 
         <View style={styles.heroCopy}>
           <Text style={styles.hero} testID="login-hero">
-            Your freelance OS,{"\n"}in your pocket.
+            Welcome back to{"\n"}Lancely.
           </Text>
           <Text style={styles.sub}>
-            Manage clients, quotes, projects, invoices, and payments — all in one calm dashboard.
+            Sign in to access your clients, quotes, invoices, and projects across all your devices.
           </Text>
         </View>
 
-        <View style={styles.bullets}>
-          {[
-            { icon: "people-outline", label: "Add clients in 30 seconds" },
-            { icon: "document-text-outline", label: "Send quotes in under a minute" },
-            { icon: "wallet-outline", label: "Know who owes you, instantly" },
-          ].map((b) => (
-            <View key={b.label} style={styles.bulletRow}>
-              <View style={styles.bulletIcon}>
-                <Ionicons name={b.icon as never} size={18} color={colors.primary} />
-              </View>
-              <Text style={styles.bulletText}>{b.label}</Text>
-            </View>
-          ))}
-        </View>
+        <View style={styles.form}>
+          <View style={styles.inputRow}>
+            <Ionicons name="mail-outline" size={18} color={colors.textSecondary} />
+            <TextInput
+              style={styles.input}
+              placeholder="Email"
+              placeholderTextColor={colors.textMuted}
+              autoCapitalize="none"
+              autoCorrect={false}
+              keyboardType="email-address"
+              value={email}
+              onChangeText={setEmail}
+              testID="login-email-input"
+            />
+          </View>
+          <View style={styles.inputRow}>
+            <Ionicons name="lock-closed-outline" size={18} color={colors.textSecondary} />
+            <TextInput
+              style={styles.input}
+              placeholder="Password"
+              placeholderTextColor={colors.textMuted}
+              secureTextEntry
+              autoCapitalize="none"
+              autoCorrect={false}
+              value={password}
+              onChangeText={setPassword}
+              testID="login-password-input"
+            />
+          </View>
 
-        <View style={styles.cta}>
           <PrimaryButton
-            label="Continue with Google"
-            onPress={onGoogle}
+            label="Sign in"
+            onPress={onSignIn}
             loading={loading}
-            testID="login-google-button"
-            leftIcon={<Ionicons name="logo-google" size={18} color={colors.textInverse} />}
+            testID="login-submit-button"
+            leftIcon={<Ionicons name="log-in-outline" size={18} color={colors.textInverse} />}
           />
-          <PrimaryButton
-            label="Try with demo data"
+
+          <View style={styles.dividerRow}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.dividerText}>or</Text>
+            <View style={styles.dividerLine} />
+          </View>
+
+          <TouchableOpacity
             onPress={onDemo}
-            loading={demoLoading}
-            variant="secondary"
+            disabled={demoLoading}
+            style={styles.demoBtn}
             testID="login-demo-button"
-            leftIcon={<Ionicons name="rocket-outline" size={18} color={colors.textPrimary} />}
-          />
+          >
+            {demoLoading ? (
+              <ActivityIndicator color={colors.textPrimary} />
+            ) : (
+              <>
+                <Ionicons name="rocket-outline" size={18} color={colors.textPrimary} />
+                <Text style={styles.demoText}>Try with demo account</Text>
+              </>
+            )}
+          </TouchableOpacity>
+
           {error ? (
             <Text style={styles.error} testID="login-error">
               {error}
             </Text>
           ) : null}
+
+          <View style={styles.signupRow}>
+            <Text style={styles.signupText}>Don&apos;t have an account?</Text>
+            <Link href="/register" asChild>
+              <TouchableOpacity testID="login-signup-link">
+                <Text style={styles.signupLink}> Create one</Text>
+              </TouchableOpacity>
+            </Link>
+          </View>
+
           <Text style={styles.footnote}>
             By continuing you agree to Lancely&apos;s Terms & Privacy.
           </Text>
@@ -163,13 +209,13 @@ const makeStyles = (colors: ColorPalette) => StyleSheet.create({
   scroll: {
     flexGrow: 1,
     paddingHorizontal: spacing.lg,
-    paddingTop: 64,
+    paddingTop: 48,
     paddingBottom: spacing.xl,
   },
   logoWrap: {
     alignSelf: "center",
-    width: 140,
-    height: 140,
+    width: 120,
+    height: 120,
     borderRadius: radii.lg,
     overflow: "hidden",
     backgroundColor: "#000",
@@ -189,36 +235,51 @@ const makeStyles = (colors: ColorPalette) => StyleSheet.create({
     ...type.body,
     color: colors.textSecondary,
     textAlign: "center",
-    marginTop: 12,
+    marginTop: 8,
     maxWidth: 320,
   },
-  bullets: {
+  form: { gap: 12 },
+  inputRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
     backgroundColor: colors.surface,
-    borderRadius: radii.lg,
     borderWidth: 1,
     borderColor: colors.border,
-    padding: spacing.md,
-    marginBottom: spacing.xl,
-    gap: 12,
+    borderRadius: radii.lg,
+    paddingHorizontal: spacing.md,
   },
-  bulletRow: { flexDirection: "row", alignItems: "center", gap: 12 },
-  bulletIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: colors.successBg,
+  input: {
+    flex: 1,
+    paddingVertical: 14,
+    color: colors.textPrimary,
+    fontSize: 15,
+  },
+  dividerRow: { flexDirection: "row", alignItems: "center", gap: 10, marginVertical: 4 },
+  dividerLine: { flex: 1, height: 1, backgroundColor: colors.border },
+  dividerText: { color: colors.textMuted, fontSize: 12, fontWeight: "600" },
+  demoBtn: {
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
+    gap: 8,
+    paddingVertical: 14,
+    borderRadius: radii.lg,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
-  bulletText: { ...type.bodyLg, color: colors.textPrimary, flex: 1 },
-  cta: { gap: 12 },
+  demoText: { ...type.bodyLg, color: colors.textPrimary, fontWeight: "600" },
+  signupRow: { flexDirection: "row", justifyContent: "center", marginTop: 8 },
+  signupText: { color: colors.textSecondary, fontSize: 13 },
+  signupLink: { color: colors.primary, fontWeight: "700", fontSize: 13 },
   error: { color: colors.errorText, textAlign: "center", fontSize: 13 },
-  footnote: { color: colors.textMuted, fontSize: 12, textAlign: "center", marginTop: 8 },
+  footnote: { color: colors.textMuted, fontSize: 12, textAlign: "center", marginTop: 4 },
   themePreviewRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginTop: spacing.lg,
+    marginTop: spacing.md,
     paddingTop: spacing.md,
     borderTopWidth: 1,
     borderTopColor: colors.border,

@@ -30,7 +30,7 @@ export default function QuotesScreen() {
   const [refreshing, setRefreshing] = useState(false);
 
   const load = useCallback(async () => {
-    const [q, c] = await Promise.all([api<Quote[]>("/quotes"), api<Client[]>("/clients")]);
+    const [q, c] = await Promise.all([api<Quote[]>("/quotations"), api<Client[]>("/clients")]);
     setItems(q);
     const map: Record<string, Client> = {};
     c.forEach((cl) => (map[cl.id] = cl));

@@ -35,7 +35,7 @@ export default function ClientProfile() {
     const [c, p, q, inv] = await Promise.all([
       api<Client>(`/clients/${id}`),
       api<Project[]>("/projects"),
-      api<Quote[]>("/quotes"),
+      api<Quote[]>("/quotations"),
       api<Invoice[]>("/invoices"),
     ]);
     setClient(c);

@@ -38,7 +38,7 @@ export default function QuoteDetail() {
 
   const load = useCallback(async () => {
     if (!id) return;
-    const q = await api<Quote>(`/quotes/${id}`);
+    const q = await api<Quote>(`/quotations/${id}`);
     setQuote(q);
     try {
       const c = await api<Client>(`/clients/${q.client_id}`);

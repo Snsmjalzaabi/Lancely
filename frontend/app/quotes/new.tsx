@@ -57,7 +57,7 @@ export default function NewQuote() {
     if (!valid) return;
     setSaving(true);
     try {
-      await api("/quotes", {
+      await api("/quotations", {
         method: "POST",
         body: {
           client_id: clientId,

@@ -86,7 +86,7 @@ export default function InvoiceDetail() {
     if (!n || n <= 0) return;
     setBusy(true);
     try {
-      const updated = await api<Invoice>(`/invoices/${invoice.id}/pay`, {
+      const updated = await api<Invoice>(`/invoices/${invoice.id}/payments`, {
         method: "POST",
         body: { amount: n },
       });

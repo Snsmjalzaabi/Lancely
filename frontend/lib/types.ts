@@ -1,73 +1,128 @@
+// Lancely shared-backend types.
+// Matches the web FastAPI contract documented in MOBILE_INTEGRATION_BRIEF.md.
+
 export type User = {
-  user_id: string;
+  id: string;
   email: string;
   name: string;
-  picture?: string | null;
+  business_name?: string;
+  trn?: string;
+  address?: string;
+  phone?: string;
+  website?: string;
+  currency?: string;
+  theme?: string;
+  created_at?: string;
+  // Local-only (RevenueCat client-side):
   is_pro?: boolean;
 };
 
 export type Client = {
   id: string;
   name: string;
-  company?: string;
-  email?: string;
-  phone?: string;
-  notes?: string;
-  created_at: string;
+  company?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  address?: string | null;
+  trn?: string | null;
+  notes?: string | null;
+  user_id?: string;
+  created_at?: string;
 };
 
-export type ProjectStatus = "lead" | "proposal_sent" | "in_progress" | "review" | "completed";
+export type ProjectStatus = "active" | "on_hold" | "completed" | "cancelled";
 
 export type Project = {
   id: string;
   name: string;
-  client_id: string;
-  value: number;
+  client_id?: string | null;
   status: ProjectStatus;
-  start_date?: string | null;
-  due_date?: string | null;
-  notes?: string;
-  created_at: string;
+  deadline?: string | null;
+  value?: number;
+  notes?: string | null;
+  user_id?: string;
+  created_at?: string;
 };
 
-export type QuoteItem = { service: string; description?: string; price: number };
+export const PROJECT_STATUSES: { key: ProjectStatus; label: string }[] = [
+  { key: "active", label: "Active" },
+  { key: "on_hold", label: "On Hold" },
+  { key: "completed", label: "Completed" },
+  { key: "cancelled", label: "Cancelled" },
+];
 
-export type Quote = {
+export type LineItem = {
+  description: string;
+  quantity: number;
+  rate: number;
+};
+
+export type QuotationStatus = "draft" | "sent" | "accepted" | "rejected";
+
+export type Quotation = {
   id: string;
-  quote_number: string;
+  number?: string;
   client_id: string;
-  title: string;
-  items: QuoteItem[];
-  notes: string;
-  amount: number;
-  status: "draft" | "sent" | "accepted" | "rejected";
-  created_at: string;
+  title?: string;
+  issue_date?: string;
+  valid_until?: string;
+  notes?: string;
+  status: QuotationStatus;
+  items: LineItem[];
+  subtotal?: number;
+  vat?: number;
+  total?: number;
+  currency?: string;
+  user_id?: string;
+  created_at?: string;
 };
 
-export type InvoiceStatus = "pending" | "paid" | "partial" | "overdue";
+// UI-friendly alias — code still says "Quote" everywhere
+export type Quote = Quotation;
+export type QuoteItem = LineItem;
+
+export type InvoiceStatus = "unpaid" | "paid" | "overdue";
+
+export type Payment = {
+  id: string;
+  amount: number;
+  method?: string;
+  payment_date?: string;
+  notes?: string;
+};
 
 export type Invoice = {
   id: string;
-  invoice_number: string;
+  number?: string;
   client_id: string;
   project_id?: string | null;
-  amount: number;
-  paid_amount: number;
+  title?: string;
+  issue_date?: string;
+  due_date?: string;
+  notes?: string;
   status: InvoiceStatus;
-  due_date: string;
-  paid_date?: string | null;
-  notes: string;
-  created_at: string;
+  items: LineItem[];
+  subtotal?: number;
+  vat?: number;
+  total?: number;
+  paid_amount?: number;
+  payment_date?: string | null;
+  payments?: Payment[];
+  currency?: string;
+  user_id?: string;
+  created_at?: string;
 };
 
 export type DashboardStats = {
-  active_clients: number;
+  total_clients: number;
+  unpaid_count: number;
+  unpaid_amount: number;
+  overdue_count: number;
+  overdue_amount: number;
   active_projects: number;
-  pending_invoices_amount: number;
-  overdue_invoices_amount: number;
-  revenue_this_month: number;
-  total_earned: number;
-  outstanding_balance: number;
+  total_revenue: number;
+  monthly_earnings: { month: string; label?: string; earnings?: number; amount?: number }[];
+  recent_invoices: Invoice[];
 };
 
 export type Notification = {
@@ -79,10 +134,9 @@ export type Notification = {
   created_at: string;
 };
 
-export const PROJECT_STATUSES: { key: ProjectStatus; label: string }[] = [
-  { key: "lead", label: "Lead" },
-  { key: "proposal_sent", label: "Proposal Sent" },
-  { key: "in_progress", label: "In Progress" },
-  { key: "review", label: "Review" },
-  { key: "completed", label: "Completed" },
-];
+export type CurrencyOption = {
+  code: string;
+  symbol: string;
+  name: string;
+  locale?: string;
+};

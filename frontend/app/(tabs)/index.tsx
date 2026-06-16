@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   RefreshControl,
@@ -17,7 +17,7 @@ import { api } from "../../lib/api";
 import { useAuth } from "../../lib/auth";
 import { useFmtCurrency } from "../../lib/format";
 import { radii, shadow, spacing, type, useTheme, type ColorPalette } from "../../lib/theme";
-import type { DashboardStats, Invoice, Notification } from "../../lib/types";
+import type { DashboardStats, Invoice } from "../../lib/types";
 import { invoiceTone, StatusBadge } from "../../components/StatusBadge";
 
 export default function Dashboard() {
@@ -27,20 +27,12 @@ export default function Dashboard() {
   const { user, signOut } = useAuth();
   const router = useRouter();
   const [stats, setStats] = useState<DashboardStats | null>(null);
-  const [upcoming, setUpcoming] = useState<Invoice[]>([]);
-  const [notifs, setNotifs] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
   const load = useCallback(async () => {
-    const [s, inv, n] = await Promise.all([
-      api<DashboardStats>("/dashboard"),
-      api<Invoice[]>("/invoices"),
-      api<{ items: Notification[] }>("/notifications"),
-    ]);
+    const s = await api<DashboardStats>("/analytics/dashboard");
     setStats(s);
-    setUpcoming(inv.filter((i) => i.status !== "paid").slice(0, 5));
-    setNotifs(n.items.slice(0, 3));
   }, []);
 
   useFocusEffect(
@@ -68,6 +60,18 @@ export default function Dashboard() {
     }
   }, [load]);
 
+  // Compute "revenue this month" from the monthly_earnings series tail
+  const revenueThisMonth = useMemo(() => {
+    if (!stats?.monthly_earnings?.length) return 0;
+    const last = stats.monthly_earnings[stats.monthly_earnings.length - 1];
+    return Number(last?.earnings ?? last?.amount ?? 0);
+  }, [stats]);
+
+  const outstandingInvoices = useMemo(() => {
+    const recent = stats?.recent_invoices ?? [];
+    return recent.filter((i) => i.status !== "paid").slice(0, 5);
+  }, [stats]);
+
   return (
     <View style={styles.flex}>
       <ScreenHeader
@@ -94,15 +98,15 @@ export default function Dashboard() {
           <>
             <View style={styles.heroCard} testID="dashboard-revenue-card">
               <Text style={styles.heroLabel}>Revenue this month</Text>
-              <Text style={styles.heroValue}>{fmtCurrency(stats?.revenue_this_month ?? 0)}</Text>
+              <Text style={styles.heroValue}>{fmtCurrency(revenueThisMonth)}</Text>
               <View style={styles.heroFooter}>
                 <View>
-                  <Text style={styles.heroSubLabel}>Total earned</Text>
-                  <Text style={styles.heroSubValue}>{fmtCurrency(stats?.total_earned ?? 0)}</Text>
+                  <Text style={styles.heroSubLabel}>Total revenue</Text>
+                  <Text style={styles.heroSubValue}>{fmtCurrency(stats?.total_revenue ?? 0)}</Text>
                 </View>
                 <View>
                   <Text style={styles.heroSubLabel}>Outstanding</Text>
-                  <Text style={styles.heroSubValue}>{fmtCurrency(stats?.outstanding_balance ?? 0)}</Text>
+                  <Text style={styles.heroSubValue}>{fmtCurrency(stats?.unpaid_amount ?? 0)}</Text>
                 </View>
               </View>
             </View>
@@ -110,8 +114,8 @@ export default function Dashboard() {
             <View style={styles.grid}>
               <KpiTile
                 icon="people-outline"
-                label="Active Clients"
-                value={String(stats?.active_clients ?? 0)}
+                label="Total Clients"
+                value={String(stats?.total_clients ?? 0)}
                 tint={colors.infoBg}
                 onPress={() => router.push("/(tabs)/clients")}
                 testID="kpi-active-clients"
@@ -126,8 +130,8 @@ export default function Dashboard() {
               />
               <KpiTile
                 icon="time-outline"
-                label="Pending"
-                value={fmtCurrency(stats?.pending_invoices_amount ?? 0)}
+                label="Unpaid"
+                value={fmtCurrency(stats?.unpaid_amount ?? 0)}
                 tint={colors.warningBg}
                 onPress={() => router.push("/(tabs)/invoices")}
                 testID="kpi-pending-invoices"
@@ -135,7 +139,7 @@ export default function Dashboard() {
               <KpiTile
                 icon="alert-circle-outline"
                 label="Overdue"
-                value={fmtCurrency(stats?.overdue_invoices_amount ?? 0)}
+                value={fmtCurrency(stats?.overdue_amount ?? 0)}
                 tint={colors.errorBg}
                 onPress={() => router.push("/(tabs)/invoices")}
                 testID="kpi-overdue-invoices"
@@ -147,48 +151,33 @@ export default function Dashboard() {
               actionLabel="View all"
               onAction={() => router.push("/(tabs)/invoices")}
             />
-            {upcoming.length === 0 ? (
+            {outstandingInvoices.length === 0 ? (
               <View style={styles.placeholder}>
                 <Text style={styles.placeholderText}>You&apos;re all caught up. </Text>
               </View>
             ) : (
-              upcoming.map((inv) => (
-                <TouchableOpacity
-                  key={inv.id}
-                  style={styles.row}
-                  onPress={() => router.push(`/invoices/${inv.id}`)}
-                  testID={`dashboard-invoice-${inv.id}`}
-                >
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.rowTitle}>{inv.invoice_number}</Text>
-                    <Text style={styles.rowSubtitle}>Due {new Date(inv.due_date).toLocaleDateString()}</Text>
-                  </View>
-                  <View style={{ alignItems: "flex-end", gap: 6 }}>
-                    <Text style={styles.rowAmount}>{fmtCurrency(inv.amount - inv.paid_amount)}</Text>
-                    <StatusBadge label={inv.status} tone={invoiceTone(inv.status)} />
-                  </View>
-                </TouchableOpacity>
-              ))
-            )}
-
-            {notifs.length > 0 ? (
-              <>
-                <SectionHeader
-                  title="Notifications"
-                  actionLabel="See all"
-                  onAction={() => router.push("/notifications")}
-                />
-                {notifs.map((n) => (
-                  <View key={n.id} style={styles.notifCard} testID={`dashboard-notif-${n.id}`}>
-                    <Ionicons name="alert-circle-outline" size={18} color={colors.warningText} />
-                    <View style={{ flex: 1, marginLeft: 10 }}>
-                      <Text style={styles.notifTitle}>{n.title}</Text>
-                      <Text style={styles.notifSub}>{n.subtitle}</Text>
+              outstandingInvoices.map((inv: Invoice) => {
+                const remaining = (Number(inv.total ?? 0)) - Number(inv.paid_amount ?? 0);
+                const dueLabel = inv.due_date ? new Date(inv.due_date).toLocaleDateString() : "—";
+                return (
+                  <TouchableOpacity
+                    key={inv.id}
+                    style={styles.row}
+                    onPress={() => router.push(`/invoices/${inv.id}`)}
+                    testID={`dashboard-invoice-${inv.id}`}
+                  >
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.rowTitle}>{inv.number ?? inv.title ?? "Invoice"}</Text>
+                      <Text style={styles.rowSubtitle}>Due {dueLabel}</Text>
                     </View>
-                  </View>
-                ))}
-              </>
-            ) : null}
+                    <View style={{ alignItems: "flex-end", gap: 6 }}>
+                      <Text style={styles.rowAmount}>{fmtCurrency(remaining)}</Text>
+                      <StatusBadge label={inv.status} tone={invoiceTone(inv.status)} />
+                    </View>
+                  </TouchableOpacity>
+                );
+              })
+            )}
 
             <View style={{ height: 24 }} />
           </>
