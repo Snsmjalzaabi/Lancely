@@ -19,7 +19,10 @@ export function PlanBadge() {
         const d = Math.max(0, Math.ceil((new Date(trialEndsAt) - new Date()) / (1000 * 60 * 60 * 24)));
         daysLeft = `· ${d}d left`;
       }
-    } catch (e) { /* noop */ }
+    } catch (dateErr) {
+      // Malformed trial_ends_at date — fall through to render without "days left" suffix.
+      console.warn('Failed to compute trial days remaining:', dateErr);
+    }
     return (
       <Badge variant="secondary" className="gap-1" data-testid="plan-badge-trial">
         <Clock className="h-3 w-3" /> Pro trial {daysLeft}

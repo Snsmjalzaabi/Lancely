@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import { createContext, useContext, useEffect, useMemo, useState, useCallback } from 'react';
 
 const ThemeContext = createContext(null);
 const THEME_KEY = 'lancely_theme';
@@ -42,8 +42,12 @@ export function ThemeProvider({ children }) {
     setThemeState((prev) => (prev === 'dark' ? 'light' : 'dark'));
   }, []);
 
+  // Memoize the context value to avoid unnecessary re-renders of every consumer
+  // whenever this provider's parent re-renders.
+  const value = useMemo(() => ({ theme, setTheme, toggleTheme }), [theme, setTheme, toggleTheme]);
+
   return (
-    <ThemeContext.Provider value={{ theme, setTheme, toggleTheme }}>
+    <ThemeContext.Provider value={value}>
       {children}
     </ThemeContext.Provider>
   );

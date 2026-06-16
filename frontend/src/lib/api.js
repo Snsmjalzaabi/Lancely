@@ -42,7 +42,10 @@ api.interceptors.response.use(
             trialEndsAt: detail.trial_ends_at,
           },
         }));
-      } catch (e) { /* CustomEvent unsupported — silent */ }
+      } catch (dispatchErr) {
+        // CustomEvent unsupported (very old browsers / non-DOM environments) — log so we don't lose context.
+        console.warn('Failed to dispatch upgrade-required event:', dispatchErr);
+      }
     }
     return Promise.reject(err);
   }

@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
+import { createContext, useContext, useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import { Purchases } from '@revenuecat/purchases-js';
 import { api } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
@@ -98,7 +98,9 @@ export function BillingProvider({ children }) {
     }
   }, [refresh]);
 
-  const value = {
+  // Memoize the context value — keeps referential equality stable across renders so consumers
+  // (PlanBadge, Pricing, BillingSettings) don't re-render on unrelated parent updates.
+  const value = useMemo(() => ({
     status,
     loading,
     rcReady,
@@ -112,7 +114,7 @@ export function BillingProvider({ children }) {
     refresh,
     ensureRevenueCat,
     refreshFromRevenueCat,
-  };
+  }), [status, loading, rcReady, refresh, ensureRevenueCat, refreshFromRevenueCat]);
 
   return (
     <BillingContext.Provider value={value}>

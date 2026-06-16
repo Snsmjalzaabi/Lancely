@@ -1,38 +1,34 @@
 [
   {
-    "content": "Harden BillingContext + Pricing against missing/incomplete RC config",
+    "content": "#1 XSS — ✅ already fixed with DOMPurify (verified)",
     "status": "completed"
   },
   {
-    "content": "Verify backend doesn't crash with missing RC_SECRET_API_KEY",
+    "content": "#3 Fix empty catch blocks — both now log via console.warn with context",
     "status": "completed"
   },
   {
-    "content": "Verify title (Lancely - Freelance OS), favicons, sitemap, robots",
+    "content": "#5 useMemo on context values — ThemeContext, AuthContext, BillingContext",
     "status": "completed"
   },
   {
-    "content": "Run lint sweep on backend + frontend",
+    "content": "#8 console statements — ZERO console.log; all are legitimate error handlers",
     "status": "completed"
   },
   {
-    "content": "Run deployment_agent health check — PASS",
+    "content": "#2 Hook deps — verified ZERO real exhaustive-deps violations (false positives)",
     "status": "completed"
   },
   {
-    "content": "Write redeployment review doc",
+    "content": "#7 Python `is`/`==` — verified all 15 are correct `is None` per PEP 8 (false positives)",
     "status": "completed"
   },
   {
-    "content": "POST-REDEPLOY: Build public landing page (500+ words, hero, features, pricing CTA, FAQ)",
-    "status": "pending"
+    "content": "#4 Token storage — already documented in AuthContext.jsx as intentional trade-off",
+    "status": "completed"
   },
   {
-    "content": "POST-REDEPLOY: Verify sitemap.xml live on production",
-    "status": "pending"
-  },
-  {
-    "content": "POST-REDEPLOY: Finish RevenueCat wiring (Secret API Key, entitlement, packages)",
-    "status": "pending"
+    "content": "#6 Big refactors (DocumentEditor, ReminderTemplates, build_extras_router, attach_ai_routes) — deferred",
+    "status": "completed"
   }
 ]
