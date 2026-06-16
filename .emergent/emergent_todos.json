@@ -1,50 +1,22 @@
 [
   {
-    "content": "Wire extras.py into server.py + start auto-reminder scheduler on app startup",
-    "status": "completed"
+    "content": "Backend: ReminderTemplate model + CRUD + auto-seed defaults",
+    "status": "in_progress"
   },
   {
-    "content": "Add AI endpoints: /ai/parse-invoice, /ai/compose-email, /ai/categorize-expense",
-    "status": "completed"
+    "content": "Backend: refactor process_due_reminders to use user templates with variable substitution",
+    "status": "pending"
   },
   {
-    "content": "Build Expenses page (with AI auto-categorize)",
-    "status": "completed"
+    "content": "Backend: AI draft template endpoint (generate starter text)",
+    "status": "pending"
   },
   {
-    "content": "Build Reports page (P&L, Aging, Cash Flow, Client Profitability)",
-    "status": "completed"
+    "content": "Frontend: Templates section in Settings → Reminders (list, edit modal, AI draft, preview)",
+    "status": "pending"
   },
   {
-    "content": "Build Activity feed page",
-    "status": "completed"
-  },
-  {
-    "content": "AI Invoice Generator modal on new invoice/quote pages",
-    "status": "completed"
-  },
-  {
-    "content": "AI Email Composer (multiple flavors) wired into invoice editor",
-    "status": "completed"
-  },
-  {
-    "content": "Reminder Settings tab in Settings",
-    "status": "completed"
-  },
-  {
-    "content": "Public invoice page (/p/:token)",
-    "status": "completed"
-  },
-  {
-    "content": "WhatsApp + public link share buttons on invoice editor",
-    "status": "completed"
-  },
-  {
-    "content": "Sidebar nav updates (Expenses / Reports / Activity)",
-    "status": "completed"
-  },
-  {
-    "content": "Smoke test passed - 0 page errors",
-    "status": "completed"
+    "content": "Smoke test template render + preview",
+    "status": "pending"
   }
 ]

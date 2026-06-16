@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Save, User, Building2, Coins, Palette, Mail, BellRing } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
+import ReminderTemplates from '@/components/ReminderTemplates';
 import { api } from '@/lib/api';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
@@ -165,7 +166,7 @@ export default function Settings() {
               </CardContent>
             </Card>
           </TabsContent>
-          <TabsContent value="reminders" className="mt-4">
+          <TabsContent value="reminders" className="mt-4 space-y-4">
             <Card className="rounded-2xl border border-border bg-card [box-shadow:var(--shadow-elev-1)]">
               <CardHeader className="pb-3"><CardTitle className="font-display text-base flex items-center gap-2"><BellRing className="h-4 w-4 text-primary" /> Automated Payment Reminders</CardTitle></CardHeader>
               <CardContent className="space-y-4">
@@ -192,6 +193,7 @@ export default function Settings() {
                 {!emailStatus?.configured && <div className="text-xs text-amber-300 border border-amber-500/30 bg-amber-500/5 rounded-lg p-3">Email service is not configured. Reminders will be logged but no real emails sent until you add <code className="font-mono">RESEND_API_KEY</code> to backend .env.</div>}
               </CardContent>
             </Card>
+            <ReminderTemplates />
           </TabsContent>
           <div className="flex justify-end mt-5">
             <Button type="submit" disabled={saving} className="bg-primary text-primary-foreground hover:bg-primary/90" data-testid="settings-save"><Save className="h-4 w-4 mr-1.5" /> {saving ? 'Saving...' : 'Save changes'}</Button>
