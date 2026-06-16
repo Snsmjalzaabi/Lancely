@@ -1,22 +1,26 @@
 [
   {
-    "content": "Backend: ReminderTemplate model + CRUD + auto-seed defaults",
+    "content": "Phase A: Fix undefined `parsed` variable in backend/extras.py (P0)",
+    "status": "completed"
+  },
+  {
+    "content": "Phase A: Fix XSS in ReminderTemplates.jsx with DOMPurify (P0)",
+    "status": "completed"
+  },
+  {
+    "content": "Phase A: Audit & fix missing React hook dependencies (P0)",
     "status": "in_progress"
   },
   {
-    "content": "Backend: refactor process_due_reminders to use user templates with variable substitution",
+    "content": "Phase B: Replace key={index} with stable IDs on real data lists (P1)",
     "status": "pending"
   },
   {
-    "content": "Backend: AI draft template endpoint (generate starter text)",
+    "content": "Phase C: Remove production console.log statements (P2)",
     "status": "pending"
   },
   {
-    "content": "Frontend: Templates section in Settings → Reminders (list, edit modal, AI draft, preview)",
-    "status": "pending"
-  },
-  {
-    "content": "Smoke test template render + preview",
+    "content": "Run testing agent (backend + frontend) to validate fixes",
     "status": "pending"
   }
 ]

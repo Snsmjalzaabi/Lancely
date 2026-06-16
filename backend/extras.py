@@ -873,8 +873,13 @@ async def ai_parse_invoice(prompt_text: str, currency: str = "AED") -> dict:
     )
     user_text = f"Currency: {currency}\nDescription:\n{prompt_text}"
     raw = await ai_call(system_prompt, user_text, json_only=True)
+    parsed: dict = {}
     try:
-        parsed = json.loads(raw)
+        loaded = json.loads(raw)
+        if isinstance(loaded, dict):
+            parsed = loaded
+        else:
+            raise ValueError("Top-level JSON is not an object")
     except Exception as e:
         logger.warning("AI returned non-JSON: %s | err=%s", raw[:300], e)
         raise HTTPException(502, "AI returned invalid JSON; please try a clearer description")

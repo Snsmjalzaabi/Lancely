@@ -53,7 +53,7 @@ export default function PublicInvoice() {
             </div>
             <div className="mt-8 border-t border-border pt-6">
               <div className="grid grid-cols-12 gap-2 text-xs uppercase tracking-wider text-muted-foreground pb-2 border-b border-border"><div className="col-span-7">Description</div><div className="col-span-2 text-right">Qty</div><div className="col-span-3 text-right">Amount</div></div>
-              {(inv.items || []).map((it, i) => <div key={i} className="grid grid-cols-12 gap-2 py-3 border-b border-border last:border-0"><div className="col-span-7">{it.description}</div><div className="col-span-2 text-right tabular-nums">{it.quantity}</div><div className="col-span-3 text-right tabular-nums">{formatMoney((it.quantity||0)*(it.rate||0), inv.currency)}</div></div>)}
+              {(inv.items || []).map((it, i) => <div key={it.id || `${i}-${it.description || ''}`} className="grid grid-cols-12 gap-2 py-3 border-b border-border last:border-0"><div className="col-span-7">{it.description}</div><div className="col-span-2 text-right tabular-nums">{it.quantity}</div><div className="col-span-3 text-right tabular-nums">{formatMoney((it.quantity||0)*(it.rate||0), inv.currency)}</div></div>)}
             </div>
             <div className="mt-6 flex justify-end"><div className="w-full sm:w-72 space-y-2">
               <div className="flex items-center justify-between text-sm"><span className="text-muted-foreground">Subtotal</span><span className="tabular-nums">{formatMoney(inv.subtotal, inv.currency)}</span></div>

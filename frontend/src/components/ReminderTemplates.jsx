@@ -1,4 +1,5 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
+import DOMPurify from 'dompurify';
 import { Plus, Pencil, Trash2, Wand2, Eye } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -85,6 +86,18 @@ export default function ReminderTemplates() {
     setForm(f => ({ ...f, html: (f.html || '') + ` {${ph}}` }));
   };
 
+  // Sanitize preview HTML to prevent XSS. Allow common formatting tags only;
+  // explicitly forbid scripts, iframes, objects, embeds, and event handlers.
+  const safePreviewHtml = useMemo(() => {
+    if (!preview?.html) return '';
+    return DOMPurify.sanitize(preview.html, {
+      ALLOWED_TAGS: ['p', 'br', 'b', 'strong', 'i', 'em', 'u', 'a', 'ul', 'ol', 'li', 'span', 'div', 'h1', 'h2', 'h3', 'h4', 'blockquote', 'code', 'pre'],
+      ALLOWED_ATTR: ['href', 'title', 'target', 'rel', 'class'],
+      FORBID_TAGS: ['script', 'style', 'iframe', 'object', 'embed', 'form', 'input', 'button'],
+      FORBID_ATTR: ['onerror', 'onload', 'onclick', 'onmouseover', 'onfocus', 'onblur', 'onchange', 'onsubmit'],
+    });
+  }, [preview?.html]);
+
   return (
     <Card className="rounded-2xl border border-border bg-card [box-shadow:var(--shadow-elev-1)]">
       <CardHeader className="pb-3 flex flex-row items-center justify-between">
@@ -152,7 +165,7 @@ export default function ReminderTemplates() {
               <div className="rounded-xl border border-border bg-background/40 p-4">
                 <div className="text-xs uppercase tracking-wider text-muted-foreground mb-1">Preview (sample data)</div>
                 <div className="font-medium text-sm mb-2">{preview.subject}</div>
-                <div className="prose prose-invert prose-sm max-w-none text-sm" dangerouslySetInnerHTML={{ __html: preview.html }} />
+                <div className="prose prose-invert prose-sm max-w-none text-sm" dangerouslySetInnerHTML={{ __html: safePreviewHtml }} />
               </div>
             )}
             <DialogFooter>

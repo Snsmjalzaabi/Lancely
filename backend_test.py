@@ -1608,6 +1608,84 @@ class LancelyAPITester:
     
     # ==================== END PHASE 4 TESTS ====================
 
+    # ==================== P0 FIX TESTS ====================
+    
+    def test_ai_parse_invoice_valid(self):
+        """P0 FIX 1(a): Test /api/ai/parse-invoice with valid description"""
+        success, data = self.run_test(
+            "AI Parse Invoice - Valid Input",
+            "POST",
+            "ai/parse-invoice",
+            200,
+            data={"text": "Logo design 1500 AED, website development 5000 AED", "currency": "AED"},
+            description="P0 FIX 1(a): Valid description should return JSON with title, items, notes"
+        )
+        if success and data:
+            if "title" in data and "items" in data and isinstance(data["items"], list):
+                self.log(f"✅ Response has correct structure with {len(data['items'])} items", "SUCCESS")
+            else:
+                self.log(f"⚠️ Response missing expected fields: {data}", "WARNING")
+
+    def test_ai_parse_invoice_short_text(self):
+        """P0 FIX 1(b): Test /api/ai/parse-invoice with short text returns 400"""
+        success, response = self.run_test(
+            "AI Parse Invoice - Short Text Returns 400",
+            "POST",
+            "ai/parse-invoice",
+            400,
+            data={"text": "hi", "currency": "AED"},
+            description="P0 FIX 1(b): Empty/short text should return 400"
+        )
+
+    def test_ai_parse_invoice_no_crash(self):
+        """P0 FIX 1(c): Test /api/ai/parse-invoice never crashes with 500"""
+        self.log("\n🤖 Testing AI Parse Invoice - No 500 Crashes...")
+        test_cases = [
+            {"text": "", "currency": "AED"},
+            {"text": "   ", "currency": "AED"},
+        ]
+        
+        all_passed = True
+        for i, test_data in enumerate(test_cases):
+            url = f"{self.base_url}/ai/parse-invoice"
+            headers = {'Content-Type': 'application/json', 'Authorization': f'Bearer {self.token}'}
+            
+            try:
+                response = requests.post(url, json=test_data, headers=headers, timeout=10)
+                self.tests_run += 1
+                
+                if response.status_code == 500:
+                    self.tests_failed += 1
+                    self.log(f"❌ Got 500 for input: {test_data}", "FAIL")
+                    all_passed = False
+                else:
+                    self.tests_passed += 1
+                    self.log(f"✅ Edge case {i+1} handled without 500 (got {response.status_code})", "PASS")
+            except Exception as e:
+                self.tests_run += 1
+                self.tests_failed += 1
+                self.log(f"❌ Exception for case {i+1}: {str(e)}", "FAIL")
+                all_passed = False
+
+    def test_ai_compose_email_without_invoice(self):
+        """P0 FIX 3: Test /api/ai/compose-email with flavor='gentle' without invoice_id"""
+        success, data = self.run_test(
+            "AI Compose Email - Without Invoice ID",
+            "POST",
+            "ai/compose-email",
+            200,
+            data={"flavor": "gentle"},
+            description="P0 FIX 3: Regression check - flavor without invoice_id should succeed"
+        )
+        if success and data:
+            if "subject" in data and "html" in data and "to" in data:
+                self.log("✅ Response has subject, html, to fields", "SUCCESS")
+            else:
+                self.log(f"⚠️ Missing expected fields. Got: {list(data.keys())}", "WARNING")
+    
+    # ==================== END P0 FIX TESTS ====================
+
+
     def run_all_tests(self):
         """Run all backend tests"""
         self.log("\n" + "="*80)
@@ -1697,6 +1775,15 @@ class LancelyAPITester:
         self.test_email_send_not_configured()
         
         self.log("\n📄 PDF WITH CURRENCY")
+        
+        # ===== P0 FIX TESTS =====
+        self.log("\n\n🔧 P0 FIX VALIDATION TESTS")
+        self.log("-" * 80)
+        self.test_ai_parse_invoice_valid()
+        self.test_ai_parse_invoice_short_text()
+        self.test_ai_parse_invoice_no_crash()
+        self.test_ai_compose_email_without_invoice()
+
         self.test_pdf_with_currency()
         
         # Summary
