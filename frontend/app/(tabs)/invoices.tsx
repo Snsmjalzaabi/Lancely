@@ -79,11 +79,13 @@ export default function InvoicesScreen() {
   }, [items, filter]);
 
   const totals = useMemo(() => {
-    const earned = items.reduce((sum, i) => sum + (i.paid_amount || 0), 0);
-    const outstanding = items.reduce((sum, i) => sum + Math.max(i.amount - (i.paid_amount || 0), 0), 0);
+    const totalOf = (i: Invoice) => Number(i.total ?? 0);
+    const paidOf = (i: Invoice) => Number(i.paid_amount ?? 0);
+    const earned = items.reduce((sum, i) => sum + paidOf(i), 0);
+    const outstanding = items.reduce((sum, i) => sum + Math.max(totalOf(i) - paidOf(i), 0), 0);
     const overdue = items
       .filter((i) => i.status === "overdue")
-      .reduce((sum, i) => sum + Math.max(i.amount - (i.paid_amount || 0), 0), 0);
+      .reduce((sum, i) => sum + Math.max(totalOf(i) - paidOf(i), 0), 0);
     return { earned, outstanding, overdue };
   }, [items]);
 
@@ -142,13 +144,13 @@ export default function InvoicesScreen() {
               testID={`invoice-row-${item.id}`}
             >
               <View style={{ flex: 1 }}>
-                <Text style={styles.title}>{item.invoice_number}</Text>
+                <Text style={styles.title}>{item.number ?? item.title ?? "Invoice"}</Text>
                 <Text style={styles.sub} numberOfLines={1}>
-                  {clients[item.client_id]?.name ?? "—"} · Due {fmtDate(item.due_date)}
+                  {clients[item.client_id]?.name ?? "—"} · Due {item.due_date ? fmtDate(item.due_date) : "—"}
                 </Text>
               </View>
               <View style={{ alignItems: "flex-end", gap: 6 }}>
-                <Text style={styles.amount}>{fmtCurrency(item.amount)}</Text>
+                <Text style={styles.amount}>{fmtCurrency(Number(item.total ?? 0))}</Text>
                 <StatusBadge label={item.status} tone={invoiceTone(item.status)} />
               </View>
             </TouchableOpacity>

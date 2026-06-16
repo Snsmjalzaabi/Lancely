@@ -45,14 +45,9 @@ export function CsvExportPanel() {
     savedCols[ds] && savedCols[ds].length > 0 ? savedCols[ds] : null;
 
   useEffect(() => {
-    (async () => {
-      try {
-        const r = await api<Options>("/reports/export-options");
-        setOptions(r);
-      } catch {
-        /* ignore */
-      }
-    })();
+    // /reports/export-options is a legacy endpoint not present on the shared backend.
+    // We rely on built-in column defaults instead.
+    void options;
   }, []);
 
   const persistCols = async (ds: DatasetKey, cols: string[]) => {
@@ -73,7 +68,7 @@ export function CsvExportPanel() {
       const qs = params.toString();
       const base = process.env.EXPO_PUBLIC_BACKEND_URL;
       const tok = await getToken();
-      const url = `${base}/api/reports/${ds}.csv${qs ? `?${qs}` : ""}`;
+      const url = `${base}/api/export/${ds}.csv${qs ? `?${qs}` : ""}`;
       if (Platform.OS === "web" && typeof window !== "undefined") {
         const r = await fetch(url, { headers: tok ? { Authorization: `Bearer ${tok}` } : {} });
         const blob = await r.blob();

@@ -67,8 +67,22 @@ export default function ReportsScreen() {
     if (range.from) params.set("date_from", range.from);
     if (range.to) params.set("date_to", range.to);
     const qs = params.toString();
-    const r = await api<ReportSummary>(`/reports/summary${qs ? `?${qs}` : ""}`);
-    setData(r);
+    type PLResp = { income?: number; expense?: number; net?: number; series?: { month: string; income: number; expense: number; net: number }[] };
+    const pl = await api<PLResp>(`/reports/pl${qs ? `?${qs}` : ""}`).catch(() => ({} as PLResp));
+    const series = pl.series ?? [];
+    // Adapt the web /reports/pl shape into the local ReportSummary shape
+    const adapted = {
+      total_earned: pl.income ?? 0,
+      revenue_this_month: series.length ? series[series.length - 1].income : 0,
+      outstanding_balance: 0, // not provided by /reports/pl; fetched separately on dashboard
+      active_clients: 0,
+      active_projects: 0,
+      pending_invoices_amount: 0,
+      overdue_invoices_amount: 0,
+      monthly_revenue: series.map((s) => ({ label: s.month, total: Number(s.income ?? 0) })),
+      top_clients: [],
+    } as unknown as ReportSummary;
+    setData(adapted);
   }, [range.from, range.to]);
 
   useFocusEffect(
