@@ -18,13 +18,29 @@ export default function Register() {
   const onSubmit = async (e) => {
     e.preventDefault();
     if (form.password.length < 6) { toast.error('Password must be at least 6 characters'); return; }
+    if (!form.name.trim()) { toast.error('Please enter your name'); return; }
     setLoading(true);
     try {
       await register({ ...form, email: form.email.trim() });
-      toast.success('Account created · Welcome to Lancely');
+      toast.success('Account created \u00b7 Welcome to Lancely');
       navigate('/dashboard');
     } catch (err) {
-      toast.error(err?.response?.data?.detail || 'Registration failed');
+      // Pydantic 422 returns `detail` as an array of error objects; legacy 4xx returns a string.
+      const raw = err?.response?.data?.detail;
+      let message;
+      if (typeof raw === 'string') {
+        message = raw;
+      } else if (Array.isArray(raw) && raw.length > 0) {
+        // Surface the first validation error in a human-readable form.
+        const first = raw[0];
+        const field = Array.isArray(first?.loc) ? first.loc[first.loc.length - 1] : 'input';
+        message = `${field}: ${first?.msg || 'invalid value'}`;
+      } else if (raw && typeof raw === 'object') {
+        message = raw.message || JSON.stringify(raw);
+      } else {
+        message = err?.message || 'Registration failed';
+      }
+      toast.error(message);
     } finally { setLoading(false); }
   };
 

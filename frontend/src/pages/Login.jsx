@@ -22,7 +22,21 @@ export default function Login() {
       toast.success('Welcome back');
       navigate('/dashboard');
     } catch (err) {
-      toast.error(err?.response?.data?.detail || 'Login failed');
+      // Pydantic 422 returns `detail` as an array; legacy 4xx returns a string.
+      const raw = err?.response?.data?.detail;
+      let message;
+      if (typeof raw === 'string') {
+        message = raw;
+      } else if (Array.isArray(raw) && raw.length > 0) {
+        const first = raw[0];
+        const field = Array.isArray(first?.loc) ? first.loc[first.loc.length - 1] : 'input';
+        message = `${field}: ${first?.msg || 'invalid value'}`;
+      } else if (raw && typeof raw === 'object') {
+        message = raw.message || JSON.stringify(raw);
+      } else {
+        message = err?.message || 'Login failed';
+      }
+      toast.error(message);
     } finally {
       setLoading(false);
     }
