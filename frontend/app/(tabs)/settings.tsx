@@ -19,6 +19,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { ScreenHeader } from "../../components/Header";
 import { ThemePickerSheet } from "../../components/ThemePicker";
+import { DeleteAccountSheet } from "../../components/DeleteAccountSheet";
 import { useAuth } from "../../lib/auth";
 import { useSettings } from "../../lib/settings";
 import {
@@ -44,6 +45,7 @@ export default function SettingsScreen() {
   const [tzOpen, setTzOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [deleteOpen, setDeleteOpen] = useState(false);
 
   const activeOpt = PICKER_OPTIONS.find((o) => o.key === themeKey) ?? PICKER_OPTIONS[0];
   const resolvedOpt = PICKER_OPTIONS.find((o) => o.key === resolvedKey);
@@ -181,59 +183,11 @@ export default function SettingsScreen() {
         )}
 
         <View style={styles.brandCard} testID="settings-brand-card">
-          <View style={styles.brandRow}>
-            <View style={styles.logoPreview}>
-              {settings.logo_base64 ? (
-                <Image source={{ uri: settings.logo_base64 }} style={styles.logoImg} />
-              ) : (
-                <Ionicons name="image-outline" size={28} color={colors.textMuted} />
-              )}
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.brandLabel}>Business logo</Text>
-              <Text style={styles.brandHint}>Used on invoices & quotes (coming soon).</Text>
-              <View style={{ flexDirection: "row", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
-                <TouchableOpacity
-                  style={styles.smallBtn}
-                  onPress={pickLogo}
-                  disabled={uploading}
-                  testID="settings-logo-upload"
-                >
-                  {uploading ? (
-                    <ActivityIndicator size="small" color={colors.textInverse} />
-                  ) : (
-                    <>
-                      <Ionicons name="cloud-upload-outline" size={14} color={colors.textInverse} />
-                      <Text style={styles.smallBtnText}>{settings.logo_base64 ? "Replace" : "Upload"}</Text>
-                    </>
-                  )}
-                </TouchableOpacity>
-                {settings.logo_base64 ? (
-                  <TouchableOpacity
-                    style={styles.smallGhostBtn}
-                    onPress={removeLogo}
-                    testID="settings-logo-remove"
-                  >
-                    <Text style={styles.smallGhostText}>Remove</Text>
-                  </TouchableOpacity>
-                ) : null}
-              </View>
-            </View>
-          </View>
-
-          <View style={styles.divider} />
-
           <Text style={styles.brandLabel}>Business name</Text>
-          <Text style={styles.brandHint}>Appears next to your logo on PDFs.</Text>
+          <Text style={styles.brandHint}>Appears on your invoices and quotes.</Text>
           <TextInput
             value={settings.business_name || ""}
-            onChangeText={(v) => {
-              if (!isPro) {
-                goPro();
-                return;
-              }
-              update({ business_name: v });
-            }}
+            onChangeText={(v) => update({ business_name: v })}
             placeholder="e.g. Crescent Studios"
             placeholderTextColor={colors.textMuted}
             style={styles.bizInput}
@@ -310,8 +264,24 @@ export default function SettingsScreen() {
           <Text style={styles.signOutText}>Sign out</Text>
         </TouchableOpacity>
 
+        <TouchableOpacity
+          style={styles.deleteAccount}
+          onPress={() => setDeleteOpen(true)}
+          testID="settings-delete-account-button"
+          activeOpacity={0.85}
+        >
+          <Ionicons name="trash-outline" size={16} color={colors.textMuted} />
+          <Text style={styles.deleteAccountText}>Delete account</Text>
+        </TouchableOpacity>
+
         <Text style={styles.footer}>Lancely — Manage. Create. Get Paid.</Text>
       </ScrollView>
+
+      <DeleteAccountSheet
+        open={deleteOpen}
+        onClose={() => setDeleteOpen(false)}
+        colors={colors}
+      />
 
       <ThemePickerSheet open={themeOpen} onClose={() => setThemeOpen(false)} />
       <OptionsSheet
@@ -589,6 +559,15 @@ const makeStyles = (colors: ColorPalette) =>
       marginTop: spacing.lg,
     },
     signOutText: { color: colors.errorText, fontWeight: "700", fontSize: 15 },
+    deleteAccount: {
+      flexDirection: "row",
+      justifyContent: "center",
+      alignItems: "center",
+      gap: 6,
+      paddingVertical: 12,
+      marginTop: 8,
+    },
+    deleteAccountText: { color: colors.textMuted, fontWeight: "600", fontSize: 13 },
     footer: {
       textAlign: "center",
       color: colors.textMuted,
