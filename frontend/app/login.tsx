@@ -21,6 +21,7 @@ import { isAppleAuthAvailable } from "../lib/appleAuth";
 import { radii, spacing, type, useTheme, type ColorPalette, THEME_LIST } from "../lib/theme";
 
 const LOGO_URL =
+  process.env.EXPO_PUBLIC_LOGO_URL ||
   "https://customer-assets.emergentagent.com/job_solvio-mvp/artifacts/jwavdz5g_ChatGPT%20Image%20Jun%2016%2C%202026%2C%2001_05_51%20AM.png";
 
 const DEMO_EMAIL = "test@lancely.ae";
