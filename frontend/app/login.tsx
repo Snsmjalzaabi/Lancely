@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Image,
@@ -17,6 +17,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { PrimaryButton } from "../components/PrimaryButton";
 import { ThemePickerSheet } from "../components/ThemePicker";
 import { useAuth } from "../lib/auth";
+import { isAppleAuthAvailable } from "../lib/appleAuth";
 import { radii, spacing, type, useTheme, type ColorPalette, THEME_LIST } from "../lib/theme";
 
 const LOGO_URL =
@@ -28,14 +29,26 @@ const DEMO_PASSWORD = "test1234";
 export default function Login() {
   const { colors } = useTheme();
   const styles = makeStyles(colors);
-  const { signIn, user } = useAuth();
+  const { signIn, signInWithApple, user } = useAuth();
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [demoLoading, setDemoLoading] = useState(false);
+  const [appleLoading, setAppleLoading] = useState(false);
+  const [appleAvailable, setAppleAvailable] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [themeOpen, setThemeOpen] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        setAppleAvailable(await isAppleAuthAvailable());
+      } catch {
+        setAppleAvailable(false);
+      }
+    })();
+  }, []);
 
   if (user) {
     router.replace("/(tabs)");
@@ -51,6 +64,20 @@ export default function Login() {
       setError(msg);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const onApple = async () => {
+    setError(null);
+    setAppleLoading(true);
+    try {
+      const res = await signInWithApple();
+      if (res.cancelled) return;
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "Sign in with Apple failed";
+      setError(msg);
+    } finally {
+      setAppleLoading(false);
     }
   };
 
@@ -138,6 +165,25 @@ export default function Login() {
             <Text style={styles.dividerText}>or</Text>
             <View style={styles.dividerLine} />
           </View>
+
+          {appleAvailable ? (
+            <TouchableOpacity
+              onPress={onApple}
+              disabled={appleLoading}
+              style={styles.appleBtn}
+              testID="login-apple-button"
+              activeOpacity={0.85}
+            >
+              {appleLoading ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <>
+                  <Ionicons name="logo-apple" size={20} color="#fff" />
+                  <Text style={styles.appleText}>Sign in with Apple</Text>
+                </>
+              )}
+            </TouchableOpacity>
+          ) : null}
 
           <TouchableOpacity
             onPress={onDemo}
@@ -270,6 +316,16 @@ const makeStyles = (colors: ColorPalette) => StyleSheet.create({
     borderColor: colors.border,
   },
   demoText: { ...type.bodyLg, color: colors.textPrimary, fontWeight: "600" },
+  appleBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 14,
+    borderRadius: radii.lg,
+    backgroundColor: "#000",
+  },
+  appleText: { color: "#fff", fontSize: 15, fontWeight: "700" },
   signupRow: { flexDirection: "row", justifyContent: "center", marginTop: 8 },
   signupText: { color: colors.textSecondary, fontSize: 13 },
   signupLink: { color: colors.primary, fontWeight: "700", fontSize: 13 },

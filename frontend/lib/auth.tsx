@@ -1,6 +1,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
 
 import { api, clearToken, setToken, getToken } from "./api";
+import { signInWithApple as appleSignIn } from "./appleAuth";
 import { configureRevenueCat, hasProEntitlement } from "./revenuecat";
 import type { User } from "./types";
 
@@ -11,6 +12,7 @@ type AuthState = {
   loading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, name: string, businessName?: string) => Promise<void>;
+  signInWithApple: () => Promise<{ cancelled: boolean }>;
   signOut: () => Promise<void>;
   refresh: () => Promise<void>;
 };
@@ -95,9 +97,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null);
   }, []);
 
+  const signInWithApple = useCallback(async () => {
+    const credential = await appleSignIn();
+    if (!credential) return { cancelled: true };
+    const res = await api<LoginResp>("/auth/apple", {
+      method: "POST",
+      auth: false,
+      body: {
+        identity_token: credential.identityToken,
+        authorization_code: credential.authorizationCode,
+        email: credential.email,
+        full_name: credential.fullName,
+        apple_user: credential.user,
+      },
+    });
+    await setToken(res.token);
+    await applyUser(res.user);
+    return { cancelled: false };
+  }, [applyUser]);
+
   return (
     <AuthContext.Provider
-      value={{ user, loading, signIn, signUp, signOut, refresh: fetchMe }}
+      value={{ user, loading, signIn, signUp, signInWithApple, signOut, refresh: fetchMe }}
     >
       {children}
     </AuthContext.Provider>
