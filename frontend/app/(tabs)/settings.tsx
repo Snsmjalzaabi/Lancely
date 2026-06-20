@@ -264,6 +264,38 @@ export default function SettingsScreen() {
           <Text style={styles.signOutText}>Sign out</Text>
         </TouchableOpacity>
 
+        <View style={styles.legalLinksCard}>
+          <TouchableOpacity style={styles.legalRow} onPress={() => router.push("/support")} testID="settings-support">
+            <Ionicons name="help-circle-outline" size={20} color={colors.primary} />
+            <Text style={styles.legalRowText}>Contact Support & FAQ</Text>
+            <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+          </TouchableOpacity>
+          <View style={styles.legalSep} />
+          <TouchableOpacity style={styles.legalRow} onPress={() => Linking.openURL("https://lance-ly.com/privacy")} testID="settings-privacy">
+            <Ionicons name="lock-closed-outline" size={20} color={colors.primary} />
+            <Text style={styles.legalRowText}>Privacy Policy</Text>
+            <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+          </TouchableOpacity>
+          <View style={styles.legalSep} />
+          <TouchableOpacity style={styles.legalRow} onPress={() => Linking.openURL("https://lance-ly.com/terms")} testID="settings-terms">
+            <Ionicons name="document-text-outline" size={20} color={colors.primary} />
+            <Text style={styles.legalRowText}>Terms of Service</Text>
+            <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+          </TouchableOpacity>
+          <View style={styles.legalSep} />
+          <TouchableOpacity style={styles.legalRow} onPress={() => router.push("/pro")} testID="settings-restore">
+            <Ionicons name="refresh-outline" size={20} color={colors.primary} />
+            <Text style={styles.legalRowText}>Restore Purchases</Text>
+            <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+          </TouchableOpacity>
+          <View style={styles.legalSep} />
+          <View style={styles.legalRow}>
+            <Ionicons name="information-circle-outline" size={20} color={colors.textSecondary} />
+            <Text style={styles.legalRowText}>App Version</Text>
+            <Text style={styles.versionText}>1.0.3</Text>
+          </View>
+        </View>
+
         <TouchableOpacity
           style={styles.deleteAccount}
           onPress={() => setDeleteOpen(true)}
@@ -568,6 +600,11 @@ const makeStyles = (colors: ColorPalette) =>
       marginTop: 8,
     },
     deleteAccountText: { color: colors.textMuted, fontWeight: "600", fontSize: 13 },
+    legalLinksCard: { backgroundColor: colors.surface, borderRadius: radii.lg, borderWidth: 1, borderColor: colors.border, overflow: "hidden", marginTop: spacing.md },
+    legalRow: { flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: spacing.md, paddingVertical: 14 },
+    legalRowText: { flex: 1, ...type.body, color: colors.textPrimary, fontWeight: "600" },
+    legalSep: { height: 1, backgroundColor: colors.border, marginLeft: 52 },
+    versionText: { color: colors.textSecondary, fontSize: 13, fontWeight: "600" },
     footer: {
       textAlign: "center",
       color: colors.textMuted,

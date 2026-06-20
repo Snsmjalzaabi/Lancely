@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Linking,
   ScrollView,
   StyleSheet,
   Text,
@@ -255,9 +256,18 @@ export default function ProPaywallScreen() {
 
         <Text style={styles.footnote}>
           {rcAvailable
-            ? "Subscriptions auto-renew until cancelled in Settings → Apple ID. Cancel anytime."
+            ? "Subscriptions auto-renew until cancelled at least 24 hours before the period ends. Manage in iPhone Settings → Apple ID → Subscriptions. By subscribing you accept our Privacy Policy and Terms of Service."
             : "You can cancel anytime. No real payment is processed in this preview build."}
         </Text>
+        <View style={styles.legalFooter}>
+          <TouchableOpacity onPress={() => Linking.openURL("https://lance-ly.com/privacy")} testID="pro-privacy-link">
+            <Text style={styles.legalLink}>Privacy Policy</Text>
+          </TouchableOpacity>
+          <Text style={styles.legalDot}>·</Text>
+          <TouchableOpacity onPress={() => Linking.openURL("https://lance-ly.com/terms")} testID="pro-terms-link">
+            <Text style={styles.legalLink}>Terms of Service</Text>
+          </TouchableOpacity>
+        </View>
       </ScrollView>
     </View>
   );
@@ -368,6 +378,9 @@ const makeStyles = (colors: ColorPalette) =>
       marginBottom: 6,
     },
     bestBadgeText: { color: colors.textInverse, fontSize: 10, fontWeight: "800", letterSpacing: 0.5 },
+    legalFooter: { flexDirection: "row", justifyContent: "center", alignItems: "center", gap: 8, marginTop: 12 },
+    legalLink: { color: colors.primary, fontSize: 12, fontWeight: "600" },
+    legalDot: { color: colors.textMuted, fontSize: 12 },
     activeBanner: {
       flexDirection: "row",
       alignItems: "center",
