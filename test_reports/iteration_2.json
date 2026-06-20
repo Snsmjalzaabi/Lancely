@@ -1,0 +1,49 @@
+{
+  "summary": "Backend-only regression for the rebuilt Lancely backend at http://localhost:8001 (also reachable via https://solvio-mvp.preview.emergentagent.com). 29/29 pytest cases pass. Covered: health/root, auth (login, wrong-password=401, register, duplicate=409, demo-session, GET/PUT/DELETE /api/auth/me w/ Bearer scoping, Apple empty-token=400), /api/currencies, full CRUD for clients/projects (incl. status PATCH JSON body)/quotations (with VAT math: subtotal=200, vat=10, total=210)/invoices (total=525, partial 300 -> paid_amount=300 still unpaid, +225 -> paid; PATCH status=unpaid wipes paid_amount=0 and payments=[]), dashboard shape (all 9 keys incl. 6-entry monthly_earnings), /api/reports/pl shape, /api/payments/reminders shape, CSV exports (clients='Name,Company', invoices='Number,Issue Date', payments='Invoice,Date'), RevenueCat webhook public 200 {received:true}, and tenant scoping (a freshly-registered user sees [] clients, not the review account's 10).",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "POST /api/auth/register", "issue": "Pydantic EmailStr (email-validator) rejects RFC-6761 reserved TLDs (.test, .example, .invalid, .localhost) with 422. The spec asked QA to register qa+<rand>@lancely.test, which always fails validation. Either (a) loosen validation for non-deliverable test-only flows, or (b) update the QA spec to use a normal TLD. Tests now use @lancelyqa.com."},
+      {"endpoint": "GET /api/health", "issue": "Response includes extra fields (app, version) beyond the spec'd {status,db}. Not a bug, just be aware: any strict-equality check on the body will fail."},
+      {"endpoint": "PATCH /api/quotes/{id}/status", "issue": "Takes status as a QUERY param while PATCH /api/invoices/{id}/status takes it as a JSON body. Asymmetric API surface — clients have to remember which is which. Consider unifying."},
+      {"endpoint": "POST /api/auth/apple", "issue": "When identity_token is non-empty but malformed, the code first calls Apple's JWKS endpoint and only then rejects. A pre-decode `pyjwt.get_unverified_header` sanity check would avoid an outbound network round-trip on obviously-bad input. (Not exercised in this run; the empty-token guard correctly returns 400.)"},
+      {"endpoint": "startup seed_user_data", "issue": "Seeding is gated by 'clients count > 0', so if a reviewer deletes one client the count stays >0 and re-seed never runs — the 10/8/15/3 guarantee can drift. Consider gating per-collection or storing a `seeded_at` flag on the user."},
+      {"endpoint": "CORS", "issue": "allow_origins=['*'] combined with allow_credentials=True is rejected by browsers for credentialed requests. Mobile uses Bearer tokens so it's fine today, but tighten before adding any cookie auth."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_lancely_backend.py",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "action_items": [
+    "(Optional) Decide whether to relax EmailStr to accept .test/.example TLDs for QA, or document that QA accounts must use a real TLD.",
+    "(Optional) Harmonize the status-update PATCH contract between /api/quotes/{id}/status (query) and /api/invoices/{id}/status (body) — pick one.",
+    "(Optional) Make seed_user_data idempotent per collection (or guarded by a user.seeded_at flag) so deleted seed data doesn't permanently drift counts."
+  ],
+  "critical_code_review_comments": [
+    "server.py is 1,319 lines — well past the 700-line guideline. Split into routers (auth, clients, projects, quotations, invoices, dashboard, exports, webhooks) before adding the next feature.",
+    "MongoDB _id is consistently stripped via `clean()` — good.",
+    "Counter-backed numbering via `next_number()` is atomic ($inc on counters collection). Improvement over the previous count_documents-based approach. ✔",
+    "All protected endpoints correctly use `Depends(current_user)` — better than the previous manual header parse.",
+    "Currency math uses floats end-to-end. For an invoicing app this is OK for the MVP but rounding errors will accumulate; Decimal or integer-cents storage is the long-term right answer.",
+    "derive_invoice_status() re-derives status on every GET / list / dashboard call. This is correct but means the persisted `status` can disagree with the computed one — only update_invoice writes the derived value back. Acceptable, but worth a comment in the code.",
+    "Apple Sign-In path uses httpx.AsyncClient with timeout=8s — good. No retry or caching of JWKS, which means every Apple login hits Apple. Consider an in-process cache (the JWKS rotates rarely).",
+    "/api/webhooks/revenuecat is public (correct, RevenueCat signs with an auth header but it's unverified here). Add HMAC/Bearer verification before production traffic."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_lancely_backend.py (new)",
+    "/app/test_reports/iteration_2.json (new)"
+  ],
+  "success_rate": {"backend": "100% (29/29)", "frontend": "n/a (backend-only run as requested)"},
+  "seed_data_creation": "No standalone seed needed — the FastAPI startup hook seeds review@lancely.com (10 clients / 8 projects / 15 invoices / 3 quotations) and demo@lancely.app. QA test users registered ad-hoc with @lancelyqa.com domain; CRUD test data was created and deleted within the review tenant, so seed counts remain ≥ expected.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Run: pytest /app/backend/tests/test_lancely_backend.py -v. Base URL via BACKEND_BASE_URL env (defaults to http://localhost:8001). Reserved TLDs (.test/.example/.invalid/.localhost) are blocked by Pydantic EmailStr — use a normal TLD when registering QA users. PATCH /api/quotes/{id}/status uses ?status= (query); PATCH /api/invoices/{id}/status uses JSON body {status: ...}. The /api/webhooks/revenuecat endpoint is intentionally public (no auth).",
+  "rca_of_issue": "Initial pytest run showed 5 failures, all caused by the spec instructing me to register users at @lancely.test. Pydantic v2's email-validator enforces RFC 6761 and rejects the .test TLD with 422, so registration never even reached the handler. Confirmed by the 422 body: \"value is not a valid email address: The part after the @-sign is a special-use or reserved name that cannot be used with email.\" Fixed by switching the test domain to @lancelyqa.com; all 29 tests now pass. The backend itself is behaving correctly — this is a spec/QA-data issue, not a regression."
+}

@@ -24,13 +24,10 @@ const LOGO_URL =
   process.env.EXPO_PUBLIC_LOGO_URL ||
   "https://customer-assets.emergentagent.com/job_solvio-mvp/artifacts/jwavdz5g_ChatGPT%20Image%20Jun%2016%2C%202026%2C%2001_05_51%20AM.png";
 
-const DEMO_EMAIL = "test@lancely.ae";
-const DEMO_PASSWORD = "test1234";
-
 export default function Login() {
   const { colors } = useTheme();
   const styles = makeStyles(colors);
-  const { signIn, signInWithApple, user } = useAuth();
+  const { signIn, signInWithApple, signInDemo, user } = useAuth();
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -86,9 +83,9 @@ export default function Login() {
     setError(null);
     setDemoLoading(true);
     try {
-      await signIn(DEMO_EMAIL, DEMO_PASSWORD);
+      await signInDemo();
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : "Demo sign-in failed";
+      const msg = e instanceof Error ? e.message : "Demo sign-in failed. Please try again.";
       setError(msg);
     } finally {
       setDemoLoading(false);

@@ -13,6 +13,7 @@ type AuthState = {
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, name: string, businessName?: string) => Promise<void>;
   signInWithApple: () => Promise<{ cancelled: boolean }>;
+  signInDemo: () => Promise<void>;
   signOut: () => Promise<void>;
   refresh: () => Promise<void>;
 };
@@ -97,6 +98,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null);
   }, []);
 
+  const signInDemo = useCallback(async () => {
+    // Dedicated demo endpoint — bypasses email/password, returns JWT for the
+    // shared demo account that is always pre-seeded with realistic sample data.
+    const res = await api<LoginResp>("/auth/demo-session", { method: "POST", auth: false });
+    await setToken(res.token);
+    await applyUser(res.user);
+  }, [applyUser]);
+
   const signInWithApple = useCallback(async () => {
     const credential = await appleSignIn();
     if (!credential) return { cancelled: true };
@@ -118,7 +127,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ user, loading, signIn, signUp, signInWithApple, signOut, refresh: fetchMe }}
+      value={{ user, loading, signIn, signUp, signInWithApple, signInDemo, signOut, refresh: fetchMe }}
     >
       {children}
     </AuthContext.Provider>
